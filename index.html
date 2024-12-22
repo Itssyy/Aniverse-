@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Zen+Tokyo+Zoo&display=swap" rel="stylesheet">
+    <title>ANIVERSE</title>
+    <meta name="description" content="A modern anime-themed website showcasing Japanese culture and art" />
+    <style>
+      *, *::before, *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      html {
+        height: -webkit-fill-available;
+      }
+
+      body {
+        min-height: 100vh;
+        min-height: -webkit-fill-available;
+        background: #0D0F14;
+        color: white;
+        line-height: 1.5;
+        overflow-x: hidden;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #root {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
+
+      /* Стили для скроллбара */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: linear-gradient(to bottom, #FF10F0, #00FFFF);
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(to bottom, #00FFFF, #FF10F0);
+      }
+
+      /* Анимация пульсации для текста */
+      @keyframes pulse {
+        0% {
+          opacity: 0.8;
+          text-shadow: 0 0 10px rgba(255, 16, 240, 0.3);
+        }
+        50% {
+          opacity: 1;
+          text-shadow: 0 0 20px rgba(255, 16, 240, 0.5);
+        }
+        100% {
+          opacity: 0.8;
+          text-shadow: 0 0 10px rgba(255, 16, 240, 0.3);
+        }
+      }
+
+      /* Медиа-запросы для адаптивности */
+      @media screen and (max-width: 768px) {
+        body {
+          font-size: 14px;
+        }
+      }
+
+      @media screen and (max-width: 480px) {
+        body {
+          font-size: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
