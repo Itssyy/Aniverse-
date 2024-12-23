@@ -11,7 +11,6 @@ import Navbar from './components/Navbar';
 import AnimePage from './pages/AnimePage';
 import AnimeList from './pages/AnimeList';
 import Home from './pages/Home';
-import AppRoutes from './routes';
 
 const App = () => {
   const location = useLocation();

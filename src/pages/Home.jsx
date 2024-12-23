@@ -19,6 +19,13 @@ const Home = () => {
   const [error, setError] = useState(null);
   const [featuredAnime, setFeaturedAnime] = useState(null);
   const initialFeaturedSet = useRef(false);
+  const [latestUpdates, setLatestUpdates] = useState([]);
+  const [genres, setGenres] = useState([]);
+  const [statistics, setStatistics] = useState({
+    totalAnime: 0,
+    totalUsers: 0,
+    totalViews: 0
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -28,15 +35,21 @@ const Home = () => {
 
         const seasons = animeService.getSeasons();
         
-        const [topResults, currentResults, previousResults] = await Promise.all([
+        const [topResults, currentResults, previousResults, latestResults, genresResults, statsResults] = await Promise.all([
           animeService.getTopAnime(),
           animeService.getSeasonalAnime(seasons.current),
-          animeService.getSeasonalAnime(seasons.previous)
+          animeService.getSeasonalAnime(seasons.previous),
+          animeService.getLatestUpdates(),
+          animeService.getPopularGenres(),
+          animeService.getStatistics()
         ]);
 
         setTopAnime(topResults);
         setCurrentSeasonAnime(currentResults);
         setPreviousSeasonAnime(previousResults);
+        setLatestUpdates(latestResults);
+        setGenres(genresResults);
+        setStatistics(statsResults);
         
         // Only set featured anime if it hasn't been set yet
         if (!initialFeaturedSet.current) {
@@ -614,6 +627,269 @@ const Home = () => {
             </Grid>
           </motion.div>
         </Box>
+      </Container>
+
+      {/* Latest Updates Section */}
+      <Container maxWidth="xl" sx={{ mt: 8 }}>
+        <Box
+          sx={{
+            fontSize: '2.5rem',
+            color: '#FF10F0',
+            mb: 4,
+            textAlign: 'center',
+            textShadow: '0 0 10px rgba(255,16,240,0.5), 0 0 20px rgba(255,16,240,0.3)',
+            fontFamily: 'Russo One, sans-serif',
+            letterSpacing: '2px',
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: -10,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '150px',
+              height: '3px',
+              background: 'linear-gradient(90deg, transparent, #FF10F0, transparent)',
+              borderRadius: '2px',
+            }
+          }}
+        >
+          <Update sx={{ fontSize: '3rem', verticalAlign: 'middle', mr: 2 }} />
+          Последние обновления
+        </Box>
+        <motion.div
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+        >
+          <Grid container spacing={3}>
+            {latestUpdates.slice(0, 6).map((anime) => (
+              <Grid item xs={12} sm={6} md={4} lg={2} key={anime.id}>
+                <motion.div variants={item}>
+                  <AnimeCard anime={anime} />
+                </motion.div>
+              </Grid>
+            ))}
+          </Grid>
+        </motion.div>
+      </Container>
+
+      {/* Genres Section */}
+      <Container maxWidth="xl" sx={{ mt: 8 }}>
+        <Box
+          sx={{
+            fontSize: '2.5rem',
+            color: '#00FFFF',
+            mb: 4,
+            textAlign: 'center',
+            textShadow: '0 0 10px rgba(0,255,255,0.5), 0 0 20px rgba(0,255,255,0.3)',
+            fontFamily: 'Russo One, sans-serif',
+            letterSpacing: '2px',
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: -10,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '150px',
+              height: '3px',
+              background: 'linear-gradient(90deg, transparent, #00FFFF, transparent)',
+              borderRadius: '2px',
+            }
+          }}
+        >
+          <Whatshot sx={{ fontSize: '3rem', verticalAlign: 'middle', mr: 2 }} />
+          Популярные жанры
+        </Box>
+        <motion.div
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+        >
+          <Grid container spacing={3}>
+            {genres.map((genre) => (
+              <Grid item xs={12} sm={6} md={4} key={genre.id}>
+                <motion.div variants={item}>
+                  <Paper
+                    component={Link}
+                    to={`/genre/${genre.id}`}
+                    sx={{
+                      p: 3,
+                      background: 'rgba(0,0,0,0.7)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '15px',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                      border: '1px solid rgba(0,255,255,0.1)',
+                      '&:hover': {
+                        transform: 'translateY(-5px)',
+                        boxShadow: '0 5px 20px rgba(0,255,255,0.3)',
+                        borderColor: 'rgba(0,255,255,0.3)',
+                      }
+                    }}
+                  >
+                    <Box sx={{ fontSize: '1.5rem', color: '#00FFFF', fontWeight: 'bold' }}>
+                      {genre.name}
+                    </Box>
+                    <Box sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                      {genre.description}
+                    </Box>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      gap: 1, 
+                      flexWrap: 'wrap'
+                    }}>
+                      {genre.examples.slice(0, 3).map((anime) => (
+                        <Box
+                          key={anime.id}
+                          component="img"
+                          src={anime.image}
+                          alt={anime.title}
+                          sx={{
+                            width: 60,
+                            height: 80,
+                            borderRadius: '5px',
+                            objectFit: 'cover',
+                            transition: 'transform 0.3s ease',
+                            '&:hover': {
+                              transform: 'scale(1.1)',
+                            }
+                          }}
+                        />
+                      ))}
+                    </Box>
+                  </Paper>
+                </motion.div>
+              </Grid>
+            ))}
+          </Grid>
+        </motion.div>
+      </Container>
+
+      {/* Statistics Section */}
+      <Container maxWidth="xl" sx={{ mt: 8, mb: 8 }}>
+        <Box
+          sx={{
+            fontSize: '2.5rem',
+            color: '#FF10F0',
+            mb: 4,
+            textAlign: 'center',
+            textShadow: '0 0 10px rgba(255,16,240,0.5), 0 0 20px rgba(255,16,240,0.3)',
+            fontFamily: 'Russo One, sans-serif',
+            letterSpacing: '2px',
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: -10,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '150px',
+              height: '3px',
+              background: 'linear-gradient(90deg, transparent, #FF10F0, transparent)',
+              borderRadius: '2px',
+            }
+          }}
+        >
+          <Star sx={{ fontSize: '3rem', verticalAlign: 'middle', mr: 2 }} />
+          Статистика проекта
+        </Box>
+        <motion.div
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+        >
+          <Grid container spacing={4}>
+            <Grid item xs={12} md={4}>
+              <motion.div variants={item}>
+                <Paper
+                  sx={{
+                    p: 4,
+                    background: 'rgba(0,0,0,0.7)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '15px',
+                    textAlign: 'center',
+                    border: '1px solid rgba(0,255,255,0.1)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-5px)',
+                      boxShadow: '0 5px 20px rgba(0,255,255,0.3)',
+                      borderColor: 'rgba(0,255,255,0.3)',
+                    }
+                  }}
+                >
+                  <Box sx={{ fontSize: '3rem', color: '#00FFFF', fontWeight: 'bold', mb: 1 }}>
+                    {statistics.totalAnime.toLocaleString()}
+                  </Box>
+                  <Box sx={{ color: '#fff', fontSize: '1.2rem' }}>
+                    Аниме в базе
+                  </Box>
+                </Paper>
+              </motion.div>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <motion.div variants={item}>
+                <Paper
+                  sx={{
+                    p: 4,
+                    background: 'rgba(0,0,0,0.7)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '15px',
+                    textAlign: 'center',
+                    border: '1px solid rgba(255,16,240,0.1)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-5px)',
+                      boxShadow: '0 5px 20px rgba(255,16,240,0.3)',
+                      borderColor: 'rgba(255,16,240,0.3)',
+                    }
+                  }}
+                >
+                  <Box sx={{ fontSize: '3rem', color: '#FF10F0', fontWeight: 'bold', mb: 1 }}>
+                    {statistics.totalUsers.toLocaleString()}
+                  </Box>
+                  <Box sx={{ color: '#fff', fontSize: '1.2rem' }}>
+                    Пользователей
+                  </Box>
+                </Paper>
+              </motion.div>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <motion.div variants={item}>
+                <Paper
+                  sx={{
+                    p: 4,
+                    background: 'rgba(0,0,0,0.7)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '15px',
+                    textAlign: 'center',
+                    border: '1px solid rgba(255,215,0,0.1)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-5px)',
+                      boxShadow: '0 5px 20px rgba(255,215,0,0.3)',
+                      borderColor: 'rgba(255,215,0,0.3)',
+                    }
+                  }}
+                >
+                  <Box sx={{ fontSize: '3rem', color: '#FFD700', fontWeight: 'bold', mb: 1 }}>
+                    {statistics.totalViews.toLocaleString()}
+                  </Box>
+                  <Box sx={{ color: '#fff', fontSize: '1.2rem' }}>
+                    Просмотров
+                  </Box>
+                </Paper>
+              </motion.div>
+            </Grid>
+          </Grid>
+        </motion.div>
       </Container>
     </Box>
   );

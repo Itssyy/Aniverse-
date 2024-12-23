@@ -174,6 +174,68 @@ const animeService = {
       console.error('Error fetching anime recommendations:', error);
       return [];
     }
+  },
+
+  async getLatestUpdates(limit = 6) {
+    try {
+      // Получаем текущий сезон и последние обновления
+      const response = await this.makeRequest('/seasons/now');
+      const animeList = response.data
+        .sort((a, b) => new Date(b.aired?.from) - new Date(a.aired?.from))
+        .slice(0, limit);
+      
+      return animeList.map(this.formatAnimeData);
+    } catch (error) {
+      console.error('Error fetching latest updates:', error);
+      return [];
+    }
+  },
+
+  async getPopularGenres(limit = 6) {
+    try {
+      // Получаем список жанров
+      const response = await this.makeRequest('/genres/anime');
+      const genres = response.data
+        .sort((a, b) => b.count - a.count)
+        .slice(0, limit);
+
+      // Для каждого жанра получаем примеры аниме
+      const genresWithExamples = await Promise.all(
+        genres.map(async (genre) => {
+          const animeResponse = await this.makeRequest(`/anime?genres=${genre.mal_id}&order_by=score&sort=desc&limit=3`);
+          return {
+            id: genre.mal_id,
+            name: genre.name,
+            description: `${genre.count} аниме`,
+            examples: animeResponse.data.map(this.formatAnimeData)
+          };
+        })
+      );
+
+      return genresWithExamples;
+    } catch (error) {
+      console.error('Error fetching popular genres:', error);
+      return [];
+    }
+  },
+
+  async getStatistics() {
+    try {
+      // В реальном приложении эти данные должны приходить с вашего бэкенда
+      // Сейчас используем моковые данные
+      return {
+        totalAnime: 16800,    // Примерное количество аниме в базе данных MyAnimeList
+        totalUsers: 25000,    // Моковое количество пользователей
+        totalViews: 1500000   // Моковое количество просмотров
+      };
+    } catch (error) {
+      console.error('Error fetching statistics:', error);
+      return {
+        totalAnime: 0,
+        totalUsers: 0,
+        totalViews: 0
+      };
+    }
   }
 };
 
