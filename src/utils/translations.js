@@ -35,6 +35,22 @@ const statusTranslations = {
   'Currently Airing': 'Онгоинг',
   'Finished Airing': 'Завершён',
   'Not yet aired': 'Анонс',
+  'TV': 'ТВ Сериал',
+  'Movie': 'Фильм',
+  'OVA': 'OVA',
+  'ONA': 'ONA',
+  'Special': 'Спешл',
+  'Music': 'Клип'
+};
+
+// Словарь для перевода рейтингов
+const ratingTranslations = {
+  'G - All Ages': 'Для всех возрастов',
+  'PG - Children': 'Детское',
+  'PG-13 - Teens 13 or older': '13+',
+  'R - 17+ (violence & profanity)': '17+',
+  'R+ - Mild Nudity': '17+ (лёгкая обнажёнка)',
+  'Rx - Hentai': 'Хентай'
 };
 
 // Функция для перевода жанра
@@ -62,4 +78,9 @@ export const formatSeasonYear = (season, year) => {
 // Функция для перевода статуса
 export const translateStatus = (status) => {
   return statusTranslations[status] || status;
+};
+
+// Функция для перевода рейтинга
+export const translateRating = (rating) => {
+  return ratingTranslations[rating] || rating;
 };

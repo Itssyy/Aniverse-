@@ -34,6 +34,9 @@ const AnimePage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Прокручиваем страницу вверх при загрузке нового аниме
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
         setLoading(true);
         setError(null);
 

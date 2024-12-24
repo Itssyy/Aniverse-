@@ -10,7 +10,7 @@ import {
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { Star } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { translateGenres, formatSeasonYear, translateStatus } from '../utils/translations';
+import { translateGenres, formatSeasonYear, translateStatus, translateRating } from '../utils/translations';
 
 export const AnimeCard = ({ anime }) => {
   const navigate = useNavigate();
@@ -186,7 +186,7 @@ export const AnimeCard = ({ anime }) => {
                 textShadow: '0 0 5px rgba(0,243,255,0.5)',
               }}
             >
-              {translateStatus(anime.status)}
+              {translateRating(anime.rating)}
             </Typography>
             <Typography
               sx={{

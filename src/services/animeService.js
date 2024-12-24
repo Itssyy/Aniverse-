@@ -14,6 +14,74 @@ const PREFETCH_LIMIT = 6; // Лимит для предварительной з
 const LOCAL_STORAGE_KEY = 'animeCache';
 const LOCAL_STORAGE_VERSION = '1.0';
 
+// Добавляем резервные изображения для каждого жанра
+const genreBackupImages = {
+  'Action': [
+    'https://cdn.myanimelist.net/images/anime/1908/135431.jpg', // Demon Slayer
+    'https://cdn.myanimelist.net/images/anime/1286/99889.jpg', // Sword Art Online
+    'https://cdn.myanimelist.net/images/anime/5/87048.jpg'  // Attack on Titan
+  ],
+  'Romance': [
+    'https://cdn.myanimelist.net/images/anime/1441/122795.jpg', // Your Name
+    'https://cdn.myanimelist.net/images/anime/13/17405.jpg',    // Toradora
+    'https://cdn.myanimelist.net/images/anime/1822/122469.jpg'  // Horimiya
+  ],
+  'Fantasy': [
+    'https://cdn.myanimelist.net/images/anime/1170/124312.jpg', // SAO Progressive
+    'https://cdn.myanimelist.net/images/anime/1298/134198.jpg', // Re:Zero
+    'https://cdn.myanimelist.net/images/anime/1152/136632.jpg'  // Mushoku Tensei
+  ],
+  'Comedy': [
+    'https://cdn.myanimelist.net/images/anime/12/76049.jpg',    // One Punch Man
+    'https://cdn.myanimelist.net/images/anime/1517/100633.jpg', // Kaguya-sama
+    'https://cdn.myanimelist.net/images/anime/1618/134679.jpg'  // Spy x Family
+  ],
+  'Drama': [
+    'https://cdn.myanimelist.net/images/anime/1404/134655.jpg', // Your Lie in April
+    'https://cdn.myanimelist.net/images/anime/13/22128.jpg',    // Clannad: After Story
+    'https://cdn.myanimelist.net/images/anime/1375/121599.jpg'  // Violet Evergarden
+  ],
+  'Supernatural': [
+    'https://cdn.myanimelist.net/images/anime/1079/138100.jpg', // Death Note
+    'https://cdn.myanimelist.net/images/anime/10/78745.jpg',    // Noragami
+    'https://cdn.myanimelist.net/images/anime/11/39717.jpg'     // Mob Psycho 100
+  ],
+  'Slice of Life': [
+    'https://cdn.myanimelist.net/images/anime/1935/127974.jpg', // Yuru Camp
+    'https://cdn.myanimelist.net/images/anime/1958/138622.jpg', // Frieren
+    'https://cdn.myanimelist.net/images/anime/1804/95033.jpg'   // A Silent Voice
+  ],
+  'Adventure': [
+    'https://cdn.myanimelist.net/images/anime/1337/99013.jpg',  // Made in Abyss
+    'https://cdn.myanimelist.net/images/anime/6/73245.jpg',     // One Piece
+    'https://cdn.myanimelist.net/images/anime/1171/109222.jpg'  // Hunter x Hunter
+  ]
+};
+
+// Функция для проверки доступности изображения
+const checkImage = (url) => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = url;
+  });
+};
+
+// Функция для получения рабочего URL изображения
+const getWorkingImageUrl = async (genre) => {
+  const backupUrls = genreBackupImages[genre.name];
+  if (!backupUrls) return null;
+
+  for (const url of backupUrls) {
+    const isWorking = await checkImage(url);
+    if (isWorking) return url;
+  }
+
+  // Если ни одно изображение не работает, возвращаем последнее
+  return backupUrls[backupUrls.length - 1];
+};
+
 // Загрузка кэша из localStorage при инициализации
 const loadCacheFromStorage = () => {
   try {
@@ -105,6 +173,49 @@ const setCacheData = (key, data) => {
   });
 };
 
+const popularGenres = [
+  {
+    name: 'Action',
+    count: 2500,
+    imageUrl: 'https://cdn.myanimelist.net/images/anime/1908/135431.jpg'
+  },
+  {
+    name: 'Romance',
+    count: 1800,
+    imageUrl: 'https://cdn.myanimelist.net/images/anime/1441/122795.jpg'
+  },
+  {
+    name: 'Fantasy',
+    count: 2200,
+    imageUrl: 'https://cdn.myanimelist.net/images/anime/1170/124312.jpg'
+  },
+  {
+    name: 'Comedy',
+    count: 2000,
+    imageUrl: 'https://cdn.myanimelist.net/images/anime/12/76049.jpg'
+  },
+  {
+    name: 'Drama',
+    count: 1900,
+    imageUrl: 'https://cdn.myanimelist.net/images/anime/1404/134655.jpg'
+  },
+  {
+    name: 'Supernatural',
+    count: 1600,
+    imageUrl: 'https://cdn.myanimelist.net/images/anime/1079/138100.jpg'
+  },
+  {
+    name: 'Slice of Life',
+    count: 1400,
+    imageUrl: 'https://cdn.myanimelist.net/images/anime/1935/127974.jpg'
+  },
+  {
+    name: 'Adventure',
+    count: 1700,
+    imageUrl: 'https://cdn.myanimelist.net/images/anime/1337/99013.jpg'
+  }
+];
+
 const animeService = {
   // Инициализация сервиса и загрузка начальных данных
   async initialize() {
@@ -116,8 +227,8 @@ const animeService = {
       try {
         // Загружаем основные данные параллельно
         const [topAnimeResponse, currentSeasonResponse, genresResponse] = await Promise.all([
-          this.makeRequest('/top/anime?limit=9'),
-          this.makeRequest('/seasons/now?limit=9'),
+          this.makeRequest('/top/anime?limit=24'),
+          this.makeRequest('/seasons/now?limit=24'),
           this.makeRequest('/genres/anime')
         ]);
 
@@ -126,7 +237,7 @@ const animeService = {
         initialData.currentSeason = currentSeasonResponse.data
           .filter(anime => anime.score)
           .sort((a, b) => b.score - a.score)
-          .slice(0, 9)
+          .slice(0, 24)
           .map(this.formatAnimeData);
         initialData.popularGenres = genresResponse.data
           .sort((a, b) => b.count - a.count)
@@ -190,19 +301,26 @@ const animeService = {
     }
   },
 
-  async getTopAnime(limit = 9) {
+  async getTopAnime(limit = 24) {
     try {
       if (!isInitialized) {
         await this.initialize();
       }
-      return initialData.topAnime || [];
+      const response = await this.makeRequest('/top/anime');
+      if (!response || !response.data) {
+        return [];
+      }
+      const results = response.data
+        .slice(0, limit)
+        .map(anime => this.formatAnimeData(anime));
+      return results;
     } catch (error) {
       console.error('Error fetching top anime:', error);
       return [];
     }
   },
 
-  async getSeasonalAnime(seasonYear, limit = 9) {
+  async getSeasonalAnime(seasonYear, limit = 24) {
     try {
       if (seasonYear === `${this.getCurrentSeason().season}-${this.getCurrentSeason().year}` && initialData.currentSeason) {
         return initialData.currentSeason;
@@ -265,7 +383,7 @@ const animeService = {
     return this.makeRequest(`/anime/${id}/full`);
   },
 
-  // Функция для транслитерации русского текста в английский
+  // Функция для транслитерации русского тек��та в английский
   transliterate(text) {
     const ru = {
       'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
@@ -497,25 +615,25 @@ const animeService = {
     }
   },
 
-  async getPopularGenres(limit = 6) {
+  async getPopularGenres() {
     try {
-      if (!isInitialized) {
-        await this.initialize();
-      }
+      // Проверяем и обновляем URL изображений для каждого жанра
+      const genresWithCheckedImages = await Promise.all(
+        popularGenres.map(async (genre) => {
+          const isMainImageWorking = await checkImage(genre.imageUrl);
+          if (!isMainImageWorking) {
+            // Если основное изображение не работает, ищем рабочее из резервных
+            const workingUrl = await getWorkingImageUrl(genre);
+            return { ...genre, imageUrl: workingUrl || genre.imageUrl };
+          }
+          return genre;
+        })
+      );
 
-      // Если примеры еще не загружены, загружаем их последовательно
-      if (initialData.popularGenres && initialData.popularGenres[0].examples.length === 0) {
-        for (const genre of initialData.popularGenres) {
-          const animeResponse = await this.makeRequest(`/anime?genres=${genre.mal_id}&order_by=score&sort=desc&limit=3`);
-          genre.examples = animeResponse.data.map(this.formatAnimeData);
-          await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
-        }
-      }
-
-      return initialData.popularGenres || [];
+      return genresWithCheckedImages;
     } catch (error) {
       console.error('Error fetching popular genres:', error);
-      return [];
+      return popularGenres; // Возвращаем оригинальные жанры в случае ошибки
     }
   },
 
