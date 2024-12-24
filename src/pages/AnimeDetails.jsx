@@ -24,13 +24,51 @@ const AnimeDetails = () => {
 
   useEffect(() => {
     const fetchAnimeDetails = async () => {
+      if (!id) {
+        setError('Invalid anime ID');
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
+        setError(null);
         const data = await animeService.getAnimeById(id);
-        setAnime(data);
+        
+        if (!data) {
+          throw new Error('Anime not found');
+        }
+
+        // Проверяем обязательные поля
+        if (!data.id || !data.title || !data.image) {
+          throw new Error('Invalid anime data received');
+        }
+
+        // Проверяем типы данных
+        if (
+          typeof data.id !== 'number' ||
+          typeof data.title !== 'string' ||
+          typeof data.image !== 'string'
+        ) {
+          throw new Error('Invalid data types in anime details');
+        }
+
+        // Проверяем дополнительные поля
+        const validatedData = {
+          ...data,
+          genres: Array.isArray(data.genres) ? data.genres : [],
+          studios: Array.isArray(data.studios) ? data.studios : [],
+          episodes: typeof data.episodes === 'number' ? data.episodes : null,
+          score: typeof data.score === 'number' ? data.score : null,
+          status: typeof data.status === 'string' ? data.status : null,
+          synopsis: typeof data.synopsis === 'string' ? data.synopsis : null
+        };
+
+        setAnime(validatedData);
       } catch (err) {
-        setError('Failed to load anime details');
-        console.error(err);
+        console.error('Error fetching anime details:', err);
+        setError(err.message || 'Failed to load anime details');
+        setAnime(null);
       } finally {
         setLoading(false);
       }

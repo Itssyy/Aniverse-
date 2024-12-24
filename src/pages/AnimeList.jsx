@@ -15,16 +15,26 @@ const AnimeList = () => {
       try {
         setIsLoading(true);
         setError(null);
-        let data;
+        let data = [];
+
+        if (!type || !['current', 'previous', 'top'].includes(type)) {
+          throw new Error('Invalid list type');
+        }
+
+        const seasons = animeService.getSeasons();
+        if (!seasons || !seasons.current || !seasons.previous) {
+          throw new Error('Failed to determine anime seasons');
+        }
+
+        console.log('Fetching anime for:', type);
+        console.log('Seasons:', seasons);
 
         switch (type) {
           case 'current':
-            const { current } = animeService.getSeasons();
-            data = await animeService.getSeasonalAnime(current, 20);
+            data = await animeService.getSeasonalAnime(seasons.current, 20);
             break;
           case 'previous':
-            const { previous } = animeService.getSeasons();
-            data = await animeService.getSeasonalAnime(previous, 20);
+            data = await animeService.getSeasonalAnime(seasons.previous, 20);
             break;
           case 'top':
             data = await animeService.getTopAnime(20);
@@ -33,10 +43,37 @@ const AnimeList = () => {
             throw new Error('Invalid anime list type');
         }
 
-        setAnimeList(data);
+        if (!Array.isArray(data)) {
+          console.error('Invalid data format:', data);
+          throw new Error('Invalid data format received');
+        }
+
+        const validData = data.filter(anime => 
+          anime && 
+          anime.id && 
+          anime.title && 
+          anime.image &&
+          typeof anime.id === 'number' &&
+          typeof anime.title === 'string' &&
+          typeof anime.image === 'string'
+        );
+
+        console.log('Valid anime data:', validData);
+
+        if (validData.length === 0) {
+          if (data.length > 0) {
+            console.error('No valid entries in data:', data);
+            throw new Error('No valid anime entries found in the response');
+          } else {
+            throw new Error('No anime data available for this selection');
+          }
+        }
+
+        setAnimeList(validData);
       } catch (err) {
         console.error('Error fetching anime:', err);
         setError(err.message || 'Failed to load anime data');
+        setAnimeList([]);
       } finally {
         setIsLoading(false);
       }

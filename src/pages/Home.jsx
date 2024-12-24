@@ -34,6 +34,9 @@ const Home = () => {
         setError(null);
 
         const seasons = animeService.getSeasons();
+        if (!seasons || !seasons.current || !seasons.previous) {
+          throw new Error('Invalid seasons data');
+        }
         
         const [topResults, currentResults, previousResults, latestResults, genresResults, statsResults] = await Promise.all([
           animeService.getTopAnime(),
@@ -44,17 +47,31 @@ const Home = () => {
           animeService.getStatistics()
         ]);
 
-        setTopAnime(topResults);
-        setCurrentSeasonAnime(currentResults);
-        setPreviousSeasonAnime(previousResults);
-        setLatestUpdates(latestResults);
-        setGenres(genresResults);
-        setStatistics(statsResults);
+        // Проверяем валидность данных
+        if (!Array.isArray(topResults) || !Array.isArray(currentResults) || 
+            !Array.isArray(previousResults) || !Array.isArray(latestResults) ||
+            !Array.isArray(genresResults)) {
+          throw new Error('Invalid data format received');
+        }
+
+        // Фильтруем невалидные элементы
+        const validateAnime = (anime) => anime && anime.id && anime.title && anime.image;
         
-        // Only set featured anime if it hasn't been set yet
+        setTopAnime(topResults.filter(validateAnime));
+        setCurrentSeasonAnime(currentResults.filter(validateAnime));
+        setPreviousSeasonAnime(previousResults.filter(validateAnime));
+        setLatestUpdates(latestResults.filter(validateAnime));
+        setGenres(genresResults.filter(genre => genre && genre.id && genre.name));
+        setStatistics({
+          totalAnime: statsResults?.totalAnime || 0,
+          totalUsers: statsResults?.totalUsers || 0,
+          totalViews: statsResults?.totalViews || 0
+        });
+        
+        // Устанавливаем featured anime только если еще не установлен
         if (!initialFeaturedSet.current) {
-          const topPool = topResults.slice(0, 3);
-          const currentPool = currentResults.slice(0, 3);
+          const topPool = topResults.filter(validateAnime).slice(0, 3);
+          const currentPool = currentResults.filter(validateAnime).slice(0, 3);
           const combinedPool = [...topPool, ...currentPool];
           
           if (combinedPool.length > 0) {
@@ -65,7 +82,18 @@ const Home = () => {
         }
       } catch (err) {
         console.error('Error fetching anime data:', err);
-        setError('Failed to load anime data. Please try again later.');
+        setError(err.message || 'Failed to load anime data. Please try again later.');
+        // Очищаем все состояния при ошибке
+        setTopAnime([]);
+        setCurrentSeasonAnime([]);
+        setPreviousSeasonAnime([]);
+        setLatestUpdates([]);
+        setGenres([]);
+        setStatistics({
+          totalAnime: 0,
+          totalUsers: 0,
+          totalViews: 0
+        });
       } finally {
         setLoading(false);
       }
