@@ -19,59 +19,105 @@ import animeService from '../services/animeService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { Link } from 'react-router-dom';
+import { translateGenres, translateStatus } from '../utils/translations';
 
 const AnimeSearchCard = ({ anime }) => {
+  // Преобразуем жанры в правильный формат и переводим их
+  const genres = anime.genres?.map(genre => {
+    if (typeof genre === 'string') {
+      return genre;
+    }
+    return genre?.name || null;
+  }).filter(Boolean) || [];
+
+  const translatedGenres = translateGenres(genres);
+  const translatedType = translateStatus(anime.type || '');
+
   return (
     <Card
       component={motion.div}
       whileHover={{ y: -5, boxShadow: '0 8px 30px rgba(255,16,240,0.2)' }}
       sx={{
         height: '100%',
-        background: 'rgba(0,0,0,0.6)',
-        backdropFilter: 'blur(10px)',
+        background: 'rgba(17, 25, 40, 0.75)',
+        backdropFilter: 'blur(16px)',
         borderRadius: '16px',
         overflow: 'hidden',
         border: '1px solid rgba(255,255,255,0.1)',
         transition: 'all 0.3s ease',
         '&:hover': {
           border: '1px solid rgba(255,16,240,0.3)',
+          '& .anime-image': {
+            transform: 'scale(1.05)',
+          },
         },
       }}
     >
       <Link to={`/anime/${anime.id}`} style={{ textDecoration: 'none' }}>
-        <CardMedia
-          component="img"
-          height="350"
-          image={anime.image}
-          alt={anime.title}
-          sx={{
-            objectFit: 'cover',
-          }}
-        />
-        <CardContent sx={{ p: 2 }}>
-          <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ position: 'relative', overflow: 'hidden' }}>
+          <CardMedia
+            component="img"
+            height="350"
+            image={anime.image}
+            alt={anime.title}
+            className="anime-image"
+            sx={{
+              objectFit: 'cover',
+              transition: 'transform 0.3s ease',
+            }}
+          />
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%)',
+              p: 1,
+              display: 'flex',
+              gap: 1,
+            }}
+          >
             {anime.score && (
               <Chip
                 icon={<Star sx={{ color: '#FFD700 !important' }} />}
                 label={anime.score}
+                size="small"
                 sx={{
-                  backgroundColor: 'rgba(255,215,0,0.1)',
+                  backgroundColor: 'rgba(17, 25, 40, 0.85)',
                   color: '#FFD700',
                   border: '1px solid rgba(255,215,0,0.3)',
+                  backdropFilter: 'blur(4px)',
+                  '& .MuiChip-label': {
+                    fontWeight: 600,
+                  },
                 }}
               />
             )}
-            {anime.type && (
+            {translatedType && (
               <Chip
-                label={anime.type}
+                label={translatedType}
+                size="small"
                 sx={{
-                  backgroundColor: 'rgba(255,16,240,0.1)',
+                  backgroundColor: 'rgba(17, 25, 40, 0.85)',
                   color: '#FF10F0',
                   border: '1px solid rgba(255,16,240,0.3)',
+                  backdropFilter: 'blur(4px)',
+                  '& .MuiChip-label': {
+                    fontWeight: 600,
+                  },
                 }}
               />
             )}
           </Box>
+        </Box>
+        <CardContent 
+          sx={{ 
+            p: 2,
+            background: 'rgba(17, 25, 40, 0.95)',
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+          }}
+        >
           <Typography
             variant="h6"
             sx={{
@@ -79,7 +125,12 @@ const AnimeSearchCard = ({ anime }) => {
               mb: 1,
               fontWeight: 'bold',
               fontSize: '1.1rem',
-              textShadow: '0 0 10px rgba(0,0,0,0.5)',
+              textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
             }}
           >
             {anime.title}
@@ -89,8 +140,12 @@ const AnimeSearchCard = ({ anime }) => {
               variant="body2"
               sx={{
                 color: 'rgba(255,255,255,0.7)',
-                mb: 1,
-                fontStyle: 'italic',
+                mb: 0.5,
+                fontFamily: "'Noto Sans JP', sans-serif",
+                fontSize: '0.85rem',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
             >
               {anime.title_japanese}
@@ -102,22 +157,40 @@ const AnimeSearchCard = ({ anime }) => {
               sx={{
                 color: 'rgba(255,255,255,0.7)',
                 mb: 1,
+                fontSize: '0.85rem',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
             >
               {anime.title_english}
             </Typography>
           )}
-          <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-            {anime.genres.slice(0, 3).map((genre) => (
+          <Box 
+            sx={{ 
+              mt: 'auto', 
+              display: 'flex', 
+              flexWrap: 'wrap', 
+              gap: 0.5,
+              pt: 1,
+              borderTop: '1px solid rgba(255,255,255,0.05)',
+            }}
+          >
+            {translatedGenres.slice(0, 3).map((genre, index) => (
               <Chip
-                key={genre}
+                key={index}
                 label={genre}
                 size="small"
                 sx={{
+                  height: '20px',
                   backgroundColor: 'rgba(0,255,255,0.1)',
                   color: '#00FFFF',
-                  border: '1px solid rgba(0,255,255,0.3)',
-                  fontSize: '0.75rem',
+                  border: '1px solid rgba(0,255,255,0.2)',
+                  fontSize: '0.7rem',
+                  '& .MuiChip-label': {
+                    px: 1,
+                    fontWeight: 500,
+                  },
                 }}
               />
             ))}
@@ -140,15 +213,18 @@ const SearchResults = () => {
 
   useEffect(() => {
     const fetchResults = async () => {
-      if (!query) {
-        setResults([]);
-        setTotalPages(1);
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
       try {
+        // Прокручиваем страницу вверх при новом поиске
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        setLoading(true);
+        setError(null);
+        if (!query) {
+          setResults([]);
+          setTotalPages(1);
+          return;
+        }
+
         const data = await animeService.searchAnime(query, page);
         
         if (!data || !Array.isArray(data.results)) {
@@ -332,4 +408,4 @@ const SearchResults = () => {
   );
 };
 
-export default SearchResults; 
+export default SearchResults;

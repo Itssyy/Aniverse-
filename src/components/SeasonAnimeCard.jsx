@@ -13,7 +13,7 @@ import {
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import RatingDisplay from './RatingDisplay';
 import translationService from '../services/translationService';
-import { translateGenres, formatSeasonYear } from '../utils/translations';
+import { translateGenres, formatSeasonYear, translateStatus, translateRating } from '../utils/translations';
 
 const SeasonAnimeCard = ({ anime }) => {
   const theme = useTheme();
@@ -199,7 +199,7 @@ const SeasonAnimeCard = ({ anime }) => {
               letterSpacing: '0.5px',
             }}
           >
-            {anime.type} • {anime.episodes ? `${anime.episodes} эп.` : 'Онгоинг'}
+            {translateStatus(anime.type)} • {anime.episodes ? `${anime.episodes} эп.` : 'Онгоинг'}
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -212,8 +212,7 @@ const SeasonAnimeCard = ({ anime }) => {
               letterSpacing: '0.5px',
             }}
           >
-            Рейтинг: {anime.score || 'N/A'} • {anime.status === 'Currently Airing' ? 'Онгоинг' : 
-               anime.status === 'Finished Airing' ? 'Завершён' : 'Анонс'}
+            {translateRating(anime.rating)} • {translateStatus(anime.status)}
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -13,6 +13,9 @@ const AnimeList = () => {
   useEffect(() => {
     const fetchAnime = async () => {
       try {
+        // Прокручиваем страницу вверх при смене типа
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
         setIsLoading(true);
         setError(null);
         let data = [];
@@ -31,13 +34,13 @@ const AnimeList = () => {
 
         switch (type) {
           case 'current':
-            data = await animeService.getSeasonalAnime(seasons.current, 20);
+            data = await animeService.getSeasonalAnime(seasons.current, 24);
             break;
           case 'previous':
-            data = await animeService.getSeasonalAnime(seasons.previous, 20);
+            data = await animeService.getSeasonalAnime(seasons.previous, 24);
             break;
           case 'top':
-            data = await animeService.getTopAnime(20);
+            data = await animeService.getTopAnime(24);
             break;
           default:
             throw new Error('Invalid anime list type');

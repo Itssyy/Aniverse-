@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Container, Grid, useTheme, Paper, Button } from '@mui/material';
+import { Box, Container, Grid, useTheme, Paper, Button, Typography } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { AnimeCard } from '../components/AnimeCard';
 import animeService from '../services/animeService';
@@ -8,7 +8,170 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { PlayArrow, Whatshot, Update, Star } from '@mui/icons-material';
 import logoImage from '../assets/image_fx_-removebg-preview.png';
 import { motion } from 'framer-motion';
-import { translateStatus, formatSeasonYear } from '../utils/translations';
+import { translateStatus, formatSeasonYear, translateRating, translateGenre } from '../utils/translations';
+
+// Добавляем анимационные варианты
+const container = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const item = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      duration: 0.5
+    }
+  },
+  show: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      duration: 0.5
+    }
+  }
+};
+
+const StatsCards = () => {
+  const cards = [
+    {
+      title: 'Топ аниме',
+      value: '9+',
+      icon: <Whatshot />,
+      gradient: 'linear-gradient(135deg, #FF6B6B 0%, #FF10F0 100%)',
+      description: 'Лучшие тайтлы'
+    },
+    {
+      title: 'Текущий сезон',
+      value: '9+',
+      icon: <Update />,
+      gradient: 'linear-gradient(135deg, #4ECDC4 0%, #00FFFF 100%)',
+      description: 'Новые релизы'
+    },
+    {
+      title: 'Предыдущий сезон',
+      value: '9+',
+      icon: <Star />,
+      gradient: 'linear-gradient(135deg, #FFD93D 0%, #FF6B6B 100%)',
+      description: 'Завершённые тайтлы'
+    },
+    {
+      title: 'Доступность',
+      value: '24/7',
+      icon: <PlayArrow />,
+      gradient: 'linear-gradient(135deg, #6C63FF 0%, #4ECDC4 100%)',
+      description: 'Всегда онлайн'
+    }
+  ];
+
+  return (
+    <Grid container spacing={4}>
+      {cards.map((card, index) => (
+        <Grid item xs={12} sm={6} md={3} key={index}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+          >
+            <Paper
+              sx={{
+                p: 3,
+                height: '100%',
+                background: card.gradient,
+                borderRadius: '16px',
+                position: 'relative',
+                overflow: 'hidden',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-5px)',
+                  boxShadow: '0 10px 20px rgba(0,0,0,0.2)',
+                  '& .icon': {
+                    transform: 'scale(1.1) rotate(5deg)',
+                  }
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%)',
+                  zIndex: 1
+                }
+              }}
+            >
+              <Box
+                className="icon"
+                sx={{
+                  position: 'absolute',
+                  top: '50%',
+                  right: '-20px',
+                  transform: 'translateY(-50%)',
+                  opacity: 0.2,
+                  transition: 'all 0.3s ease',
+                  '& .MuiSvgIcon-root': {
+                    fontSize: '100px',
+                    color: 'rgba(255,255,255,0.5)'
+                  }
+                }}
+              >
+                {card.icon}
+              </Box>
+              <Box sx={{ position: 'relative', zIndex: 2 }}>
+                <Typography
+                  variant="h3"
+                  sx={{
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    mb: 1,
+                    fontFamily: 'Russo One, sans-serif',
+                    textShadow: '2px 2px 4px rgba(0,0,0,0.2)'
+                  }}
+                >
+                  {card.value}
+                </Typography>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    mb: 1,
+                    fontFamily: 'Russo One, sans-serif'
+                  }}
+                >
+                  {card.title}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'rgba(255,255,255,0.8)',
+                    fontFamily: 'Russo One, sans-serif'
+                  }}
+                >
+                  {card.description}
+                </Typography>
+              </Box>
+            </Paper>
+          </motion.div>
+        </Grid>
+      ))}
+    </Grid>
+  );
+};
 
 const Home = () => {
   const theme = useTheme();
@@ -48,7 +211,7 @@ const Home = () => {
         }
 
         // Загружаем данные поэтапно
-        // 1. Сначала загружаем критически важные данные
+        // 1. Сначал�� загружаем критически важные данные
         const loadCriticalData = async () => {
           const [topAnime, currentSeason] = await Promise.all([
             animeService.getTopAnime(),
@@ -137,29 +300,6 @@ const Home = () => {
   if (error) {
     return <ErrorMessage message={error} />;
   }
-
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { 
-      opacity: 1, 
-      y: 0,
-      transition: {
-        type: "spring",
-        stiffness: 100,
-        damping: 20
-      }
-    }
-  };
 
   return (
     <Box sx={{ 
@@ -362,7 +502,7 @@ const Home = () => {
                               fontSize: '0.9rem',
                               color: '#fff',
                             }}>
-                              {featuredAnime.rating}
+                              {translateRating(featuredAnime.rating)}
                             </Box>
                           </Grid>
                         )}
@@ -493,197 +633,100 @@ const Home = () => {
         </Container>
       </Box>
 
-      {/* Quick Stats Section */}
-      <Container maxWidth="xl">
-        <Grid container spacing={4} sx={{ mb: 8 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper
-              sx={{
-                p: 3,
-                background: 'rgba(255,16,240,0.1)',
-                borderRadius: '15px',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255,16,240,0.2)',
-                textAlign: 'center',
-                transition: 'transform 0.3s',
-                '&:hover': {
-                  transform: 'translateY(-5px)',
-                }
-              }}
-            >
-              <Whatshot sx={{ fontSize: 40, color: '#FF10F0', mb: 1 }} />
-              <Box sx={{ fontSize: '2rem', color: '#FF10F0', mb: 1 }}>
-                {topAnime.length}+
-              </Box>
-              <Box sx={{ color: 'rgba(255,255,255,0.9)' }}>
-                Топ аниме
-              </Box>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper
-              sx={{
-                p: 3,
-                background: 'rgba(0,255,255,0.1)',
-                borderRadius: '15px',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(0,255,255,0.2)',
-                textAlign: 'center',
-                transition: 'transform 0.3s',
-                '&:hover': {
-                  transform: 'translateY(-5px)',
-                }
-              }}
-            >
-              <Update sx={{ fontSize: 40, color: '#00FFFF', mb: 1 }} />
-              <Box sx={{ fontSize: '2rem', color: '#00FFFF', mb: 1 }}>
-                {currentSeasonAnime.length}+
-              </Box>
-              <Box sx={{ color: 'rgba(255,255,255,0.9)' }}>
-                Текущий сезон
-              </Box>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper
-              sx={{
-                p: 3,
-                background: 'rgba(255,16,240,0.1)',
-                borderRadius: '15px',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255,16,240,0.2)',
-                textAlign: 'center',
-                transition: 'transform 0.3s',
-                '&:hover': {
-                  transform: 'translateY(-5px)',
-                }
-              }}
-            >
-              <Star sx={{ fontSize: 40, color: '#FF10F0', mb: 1 }} />
-              <Box sx={{ fontSize: '2rem', color: '#FF10F0', mb: 1 }}>
-                {previousSeasonAnime.length}+
-              </Box>
-              <Box sx={{ color: 'rgba(255,255,255,0.9)' }}>
-                Предыдущий сезон
-              </Box>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper
-              sx={{
-                p: 3,
-                background: 'rgba(0,255,255,0.1)',
-                borderRadius: '15px',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(0,255,255,0.2)',
-                textAlign: 'center',
-                transition: 'transform 0.3s',
-                '&:hover': {
-                  transform: 'translateY(-5px)',
-                }
-              }}
-            >
-              <PlayArrow sx={{ fontSize: 40, color: '#00FFFF', mb: 1 }} />
-              <Box sx={{ fontSize: '2rem', color: '#00FFFF', mb: 1 }}>
-                24/7
-              </Box>
-              <Box sx={{ color: 'rgba(255,255,255,0.9)' }}>
-                Доступность
-              </Box>
-            </Paper>
-          </Grid>
-        </Grid>
-
-        {/* Featured Anime Section */}
-        <Box sx={{ mb: 8 }}>
-          <Box
-            sx={{
-              fontSize: '2.5rem',
-              color: '#FF10F0',
-              mb: 4,
-              textAlign: 'center',
-              textShadow: '0 0 10px rgba(255,16,240,0.5), 0 0 20px rgba(255,16,240,0.3)',
-              fontFamily: 'Russo One, sans-serif',
-              letterSpacing: '2px',
-              position: 'relative',
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                bottom: -10,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '150px',
-                height: '3px',
-                background: 'linear-gradient(90deg, transparent, #FF10F0, transparent)',
-                borderRadius: '2px',
-              }
-            }}
-          >
-            Популярные тайтлы
-          </Box>
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            variants={container}
-          >
-            <Grid container spacing={3}>
-              {topAnime.slice(0, 4).map((anime) => (
-                <Grid item xs={12} sm={6} md={3} key={anime.id}>
-                  <motion.div variants={item}>
-                    <AnimeCard anime={anime} />
-                  </motion.div>
-                </Grid>
-              ))}
-            </Grid>
-          </motion.div>
-        </Box>
-
-        {/* Current Season Section */}
-        <Box sx={{ mb: 8 }}>
-          <Box
-            sx={{
-              fontSize: '2.5rem',
-              color: '#00FFFF',
-              mb: 4,
-              textAlign: 'center',
-              textShadow: '0 0 10px rgba(0,255,255,0.5), 0 0 20px rgba(0,255,255,0.3)',
-              fontFamily: 'Russo One, sans-serif',
-              letterSpacing: '2px',
-              position: 'relative',
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                bottom: -10,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '150px',
-                height: '3px',
-                background: 'linear-gradient(90deg, transparent, #00FFFF, transparent)',
-                borderRadius: '2px',
-              }
-            }}
-          >
-            Аниме текущего сезона
-          </Box>
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            variants={container}
-          >
-            <Grid container spacing={3}>
-              {currentSeasonAnime.slice(0, 4).map((anime) => (
-                <Grid item xs={12} sm={6} md={3} key={anime.id}>
-                  <motion.div variants={item}>
-                    <AnimeCard anime={anime} />
-                  </motion.div>
-                </Grid>
-              ))}
-            </Grid>
-          </motion.div>
-        </Box>
+      {/* Stats Cards */}
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+        <StatsCards />
       </Container>
+
+      {/* Featured Anime Section */}
+      <Box sx={{ mb: 8 }}>
+        <Box
+          sx={{
+            fontSize: '2.5rem',
+            color: '#FF10F0',
+            mb: 4,
+            textAlign: 'center',
+            textShadow: '0 0 10px rgba(255,16,240,0.5), 0 0 20px rgba(255,16,240,0.3)',
+            fontFamily: 'Russo One, sans-serif',
+            letterSpacing: '2px',
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: -10,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '150px',
+              height: '3px',
+              background: 'linear-gradient(90deg, transparent, #FF10F0, transparent)',
+              borderRadius: '2px',
+            }
+          }}
+        >
+          Популярные тайтлы
+        </Box>
+        <motion.div
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          variants={container}
+        >
+          <Grid container spacing={3}>
+            {topAnime.slice(0, 4).map((anime) => (
+              <Grid item xs={12} sm={6} md={3} key={anime.id}>
+                <motion.div variants={item}>
+                  <AnimeCard anime={anime} />
+                </motion.div>
+              </Grid>
+            ))}
+          </Grid>
+        </motion.div>
+      </Box>
+
+      {/* Current Season Section */}
+      <Box sx={{ mb: 8 }}>
+        <Box
+          sx={{
+            fontSize: '2.5rem',
+            color: '#00FFFF',
+            mb: 4,
+            textAlign: 'center',
+            textShadow: '0 0 10px rgba(0,255,255,0.5), 0 0 20px rgba(0,255,255,0.3)',
+            fontFamily: 'Russo One, sans-serif',
+            letterSpacing: '2px',
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: -10,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '150px',
+              height: '3px',
+              background: 'linear-gradient(90deg, transparent, #00FFFF, transparent)',
+              borderRadius: '2px',
+            }
+          }}
+        >
+          Аниме текущего сезона
+        </Box>
+        <motion.div
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          variants={container}
+        >
+          <Grid container spacing={3}>
+            {currentSeasonAnime.slice(0, 4).map((anime) => (
+              <Grid item xs={12} sm={6} md={3} key={anime.id}>
+                <motion.div variants={item}>
+                  <AnimeCard anime={anime} />
+                </motion.div>
+              </Grid>
+            ))}
+          </Grid>
+        </motion.div>
+      </Box>
 
       {/* Latest Updates Section */}
       <Container maxWidth="xl" sx={{ mt: 8 }}>
@@ -732,100 +775,115 @@ const Home = () => {
       </Container>
 
       {/* Genres Section */}
-      <Container maxWidth="xl" sx={{ mt: 8 }}>
+      <Container maxWidth="xl" sx={{ mt: 8, mb: 6 }}>
         <Box
-          sx={{
-            fontSize: '2.5rem',
-            color: '#00FFFF',
-            mb: 4,
-            textAlign: 'center',
-            textShadow: '0 0 10px rgba(0,255,255,0.5), 0 0 20px rgba(0,255,255,0.3)',
-            fontFamily: 'Russo One, sans-serif',
-            letterSpacing: '2px',
-            position: 'relative',
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              bottom: -10,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '150px',
-              height: '3px',
-              background: 'linear-gradient(90deg, transparent, #00FFFF, transparent)',
-              borderRadius: '2px',
-            }
-          }}
-        >
-          <Whatshot sx={{ fontSize: '3rem', verticalAlign: 'middle', mr: 2 }} />
-          Популярные жанры
-        </Box>
-        <motion.div
+          component={motion.div}
           variants={container}
           initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
+          animate="visible"
+          sx={{ width: '100%' }}
         >
-          <Grid container spacing={3}>
-            {genres.map((genre) => (
-              <Grid item xs={12} sm={6} md={4} key={genre.id}>
+          <Typography variant="h4" sx={{
+            color: '#fff',
+            mb: 3,
+            fontFamily: 'Russo One, sans-serif',
+            textShadow: '0 0 10px rgba(255,16,240,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            justifyContent: 'center'
+          }}>
+            <Whatshot sx={{ color: '#FF10F0' }} />
+            Популярные жанры
+          </Typography>
+          <Grid container spacing={2}>
+            {genres.slice(0, 8).map((genre, index) => (
+              <Grid item xs={12} sm={6} md={3} key={genre.name || index}>
                 <motion.div variants={item}>
                   <Paper
                     component={Link}
-                    to={`/genre/${genre.id}`}
+                    to={`/genre/${genre.name}`}
                     sx={{
-                      p: 3,
-                      background: 'rgba(0,0,0,0.7)',
-                      backdropFilter: 'blur(10px)',
+                      position: 'relative',
+                      height: '200px',
+                      overflow: 'hidden',
                       borderRadius: '15px',
-                      transition: 'all 0.3s ease',
-                      cursor: 'pointer',
+                      background: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.7)), url(${genre.imageUrl})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 2,
-                      border: '1px solid rgba(0,255,255,0.1)',
+                      justifyContent: 'flex-end',
+                      padding: '20px',
+                      textDecoration: 'none',
+                      transition: 'all 0.3s ease',
+                      border: '1px solid rgba(255,16,240,0.1)',
                       '&:hover': {
                         transform: 'translateY(-5px)',
-                        boxShadow: '0 5px 20px rgba(0,255,255,0.3)',
-                        borderColor: 'rgba(0,255,255,0.3)',
-                      }
+                        boxShadow: '0 5px 20px rgba(255,16,240,0.3)',
+                        '& .genre-overlay': {
+                          opacity: 0.8,
+                        },
+                        '& .genre-count': {
+                          opacity: 1,
+                          transform: 'translateY(0)',
+                        },
+                        '& .genre-title': {
+                          color: '#FF10F0',
+                          textShadow: '0 0 10px rgba(255,16,240,0.5)',
+                        }
+                      },
                     }}
                   >
-                    <Box sx={{ fontSize: '1.5rem', color: '#00FFFF', fontWeight: 'bold' }}>
-                      {genre.name}
-                    </Box>
-                    <Box sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                      {genre.description}
-                    </Box>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      gap: 1, 
-                      flexWrap: 'wrap'
-                    }}>
-                      {genre.examples.slice(0, 3).map((anime) => (
-                        <Box
-                          key={anime.id}
-                          component="img"
-                          src={anime.image}
-                          alt={anime.title}
-                          sx={{
-                            width: 60,
-                            height: 80,
-                            borderRadius: '5px',
-                            objectFit: 'cover',
-                            transition: 'transform 0.3s ease',
-                            '&:hover': {
-                              transform: 'scale(1.1)',
-                            }
-                          }}
-                        />
-                      ))}
-                    </Box>
+                    <Box
+                      className="genre-overlay"
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.8))',
+                        opacity: 0.6,
+                        transition: 'opacity 0.3s ease',
+                      }}
+                    />
+                    <Typography
+                      className="genre-title"
+                      variant="h6"
+                      sx={{
+                        color: '#fff',
+                        fontFamily: 'Russo One, sans-serif',
+                        position: 'relative',
+                        zIndex: 1,
+                        textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+                        transition: 'all 0.3s ease',
+                      }}
+                    >
+                      {translateGenre(genre.name)}
+                    </Typography>
+                    <Typography
+                      className="genre-count"
+                      sx={{
+                        color: '#FF10F0',
+                        position: 'relative',
+                        zIndex: 1,
+                        opacity: 0.8,
+                        transform: 'translateY(10px)',
+                        transition: 'all 0.3s ease',
+                        fontSize: '0.9rem',
+                        mt: 1,
+                        fontFamily: 'Russo One, sans-serif',
+                      }}
+                    >
+                      {genre.count.toLocaleString()} аниме
+                    </Typography>
                   </Paper>
                 </motion.div>
               </Grid>
             ))}
           </Grid>
-        </motion.div>
+        </Box>
       </Container>
 
       {/* Statistics Section */}

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Hls from 'hls.js';
 import {
   Box,
@@ -14,6 +14,7 @@ import {
   useTheme,
   alpha,
   Slider,
+  Tooltip,
 } from '@mui/material';
 import {
   PlayArrow,
@@ -23,12 +24,111 @@ import {
   Fullscreen,
   SkipNext,
   SkipPrevious,
+  LightbulbOutlined,
+  Lightbulb,
 } from '@mui/icons-material';
+import { styled } from '@mui/material/styles';
+
+const VideoContainer = styled(Box)(({ boxShadow }) => ({
+  position: 'relative',
+  width: '100%',
+  margin: '20px auto',
+  borderRadius: '10px',
+  overflow: 'visible',
+  transition: 'all 0.3s ease',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: '-20px',
+    left: '-20px',
+    right: '-20px',
+    bottom: '-20px',
+    borderRadius: '15px',
+    background: 'transparent',
+    boxShadow: boxShadow,
+    transition: 'box-shadow 0.3s ease',
+    pointerEvents: 'none',
+    zIndex: -1
+  },
+  '& video': {
+    borderRadius: '10px',
+    transition: 'all 0.3s ease'
+  }
+}));
+
+const GlowButton = styled(IconButton)(({ theme, isActive }) => ({
+  color: isActive ? '#FFD700' : alpha(theme.palette.common.white, 0.7),
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    color: isActive ? '#FFC000' : theme.palette.common.white,
+  },
+  '& svg': {
+    filter: isActive ? 'drop-shadow(0 0 8px rgba(255, 215, 0, 0.8))' : 'none',
+    transition: 'filter 0.3s ease',
+  },
+}));
+
+const GlowIntensitySlider = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  top: '-120px',
+  right: '10px',
+  background: 'rgba(0, 0, 0, 0.4)',
+  backdropFilter: 'blur(8px)',
+  padding: '12px 8px',
+  borderRadius: '12px',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: '8px',
+  transition: 'all 0.3s ease',
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+  '&:hover': {
+    background: 'rgba(0, 0, 0, 0.5)',
+  },
+  '& .MuiSlider-root': {
+    width: '3px',
+    height: 80,
+    padding: '0 8px',
+    '& .MuiSlider-thumb': {
+      width: 12,
+      height: 12,
+      backgroundColor: '#fff',
+      boxShadow: '0 0 8px rgba(255, 255, 255, 0.5)',
+      '&:hover, &.Mui-active': {
+        boxShadow: '0 0 12px rgba(255, 255, 255, 0.8)',
+        width: 14,
+        height: 14,
+      },
+      '&:before': {
+        display: 'none',
+      },
+    },
+    '& .MuiSlider-track': {
+      background: 'linear-gradient(to top, rgba(255,215,0,0.3), rgba(255,215,0,1))',
+      border: 'none',
+      width: '3px',
+    },
+    '& .MuiSlider-rail': {
+      background: 'rgba(255,255,255,0.1)',
+      width: '3px',
+      opacity: 1,
+    },
+  },
+  '& .intensity-label': {
+    fontSize: '0.7rem',
+    color: 'rgba(255,255,255,0.8)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    fontWeight: 500,
+  },
+}));
 
 const EpisodePlayer = ({ episodes }) => {
   const theme = useTheme();
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [boxShadow, setBoxShadow] = useState('');
   const [selectedEpisode, setSelectedEpisode] = useState(null);
   const [selectedQuality, setSelectedQuality] = useState('');
   const [availableQualities, setAvailableQualities] = useState([]);
@@ -40,7 +140,169 @@ const EpisodePlayer = ({ episodes }) => {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [showControls, setShowControls] = useState(true);
+  const [isGlowEnabled, setIsGlowEnabled] = useState(true);
+  const [showGlowSlider, setShowGlowSlider] = useState(false);
+  const [glowIntensity, setGlowIntensity] = useState(50); // 0-100
   const controlsTimeoutRef = useRef(null);
+  const glowAnimationRef = useRef(null);
+
+  const handleMouseMove = useCallback(() => {
+    setShowControls(true);
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    controlsTimeoutRef.current = setTimeout(() => {
+      if (!videoRef.current?.paused) {
+        setShowControls(false);
+      }
+    }, 3000);
+  }, []);
+
+  const handleTimeUpdate = useCallback(() => {
+    if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime);
+      setDuration(videoRef.current.duration);
+    }
+  }, []);
+
+  const handlePlayPause = useCallback(() => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+        setIsPlaying(true);
+      } else {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    }
+  }, []);
+
+  const handleVolumeChange = useCallback((event, newValue) => {
+    setVolume(newValue);
+    if (videoRef.current) {
+      videoRef.current.volume = newValue;
+      setIsMuted(newValue === 0);
+    }
+  }, []);
+
+  const handleMute = useCallback(() => {
+    if (videoRef.current) {
+      const newMutedState = !isMuted;
+      videoRef.current.muted = newMutedState;
+      setIsMuted(newMutedState);
+      if (newMutedState) {
+        setVolume(0);
+      } else {
+        setVolume(1);
+        videoRef.current.volume = 1;
+      }
+    }
+  }, [isMuted]);
+
+  const handleTimeSliderChange = useCallback((event, newValue) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = newValue;
+      setCurrentTime(newValue);
+    }
+  }, []);
+
+  const handleEpisodeChange = useCallback((event) => {
+    const episode = episodes.find(ep => ep.episode === event.target.value);
+    setSelectedEpisode(episode);
+  }, [episodes]);
+
+  const handleQualityChange = useCallback((event) => {
+    setSelectedQuality(event.target.value);
+  }, []);
+
+  const handleFullscreen = useCallback(() => {
+    if (videoRef.current) {
+      if (videoRef.current.requestFullscreen) {
+        videoRef.current.requestFullscreen();
+      } else if (videoRef.current.webkitRequestFullscreen) {
+        videoRef.current.webkitRequestFullscreen();
+      } else if (videoRef.current.msRequestFullscreen) {
+        videoRef.current.msRequestFullscreen();
+      }
+    }
+  }, []);
+
+  const handlePrevEpisode = useCallback(() => {
+    const currentIndex = episodes.findIndex(ep => ep.episode === selectedEpisode.episode);
+    if (currentIndex > 0) {
+      setSelectedEpisode(episodes[currentIndex - 1]);
+    }
+  }, [episodes, selectedEpisode]);
+
+  const handleNextEpisode = useCallback(() => {
+    const currentIndex = episodes.findIndex(ep => ep.episode === selectedEpisode.episode);
+    if (currentIndex < episodes.length - 1) {
+      setSelectedEpisode(episodes[currentIndex + 1]);
+    }
+  }, [episodes, selectedEpisode]);
+
+  const handleGlowToggle = useCallback(() => {
+    setIsGlowEnabled(prev => {
+      const newState = !prev;
+      if (newState && videoRef.current && !videoRef.current.paused) {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        const video = videoRef.current;
+
+        const updateGlow = () => {
+          if (video && !video.paused && !video.ended) {
+            canvas.width = video.videoWidth / 20;
+            canvas.height = video.videoHeight / 20;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const frame = context.getImageData(0, 0, canvas.width, canvas.height);
+            const length = frame.data.length;
+            let r = 0, g = 0, b = 0;
+
+            for (let i = 0; i < length; i += 4) {
+              r += frame.data[i];
+              g += frame.data[i + 1];
+              b += frame.data[i + 2];
+            }
+
+            r = Math.floor(r / (length / 4));
+            g = Math.floor(g / (length / 4));
+            b = Math.floor(b / (length / 4));
+
+            const brightnessBoost = 1.5;
+            r = Math.min(255, r * brightnessBoost);
+            g = Math.min(255, g * brightnessBoost);
+            b = Math.min(255, b * brightnessBoost);
+
+            const newBoxShadow = `
+              0 0 50px 20px rgba(${r}, ${g}, ${b}, 0.8),
+              0 0 100px 40px rgba(${r}, ${g}, ${b}, 0.4),
+              0 0 150px 60px rgba(${r}, ${g}, ${b}, 0.2)
+            `;
+            setBoxShadow(newBoxShadow);
+
+            glowAnimationRef.current = requestAnimationFrame(updateGlow);
+          }
+        };
+
+        updateGlow();
+      } else if (!newState) {
+        if (glowAnimationRef.current) {
+          cancelAnimationFrame(glowAnimationRef.current);
+        }
+        setBoxShadow('');
+      }
+      return newState;
+    });
+  }, []);
+
+  const handleGlowIntensityChange = useCallback((event, newValue) => {
+    setGlowIntensity(newValue);
+  }, []);
+
+  const calculateGlowIntensity = useCallback((baseIntensity) => {
+    return 0.2 + (baseIntensity / 100) * 2.8;
+  }, []);
 
   useEffect(() => {
     if (episodes && episodes.length > 0) {
@@ -54,6 +316,85 @@ const EpisodePlayer = ({ episodes }) => {
       setSelectedQuality(qualities[0] || '');
     }
   }, [episodes]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+
+    const updateGlow = () => {
+      if (video && !video.paused && !video.ended && isGlowEnabled) {
+        canvas.width = video.videoWidth / 20;
+        canvas.height = video.videoHeight / 20;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const frame = context.getImageData(0, 0, canvas.width, canvas.height);
+        const length = frame.data.length;
+        let r = 0, g = 0, b = 0;
+
+        for (let i = 0; i < length; i += 4) {
+          r += frame.data[i];
+          g += frame.data[i + 1];
+          b += frame.data[i + 2];
+        }
+
+        r = Math.floor(r / (length / 4));
+        g = Math.floor(g / (length / 4));
+        b = Math.floor(b / (length / 4));
+
+        const brightnessBoost = calculateGlowIntensity(glowIntensity);
+        r = Math.min(255, r * brightnessBoost);
+        g = Math.min(255, g * brightnessBoost);
+        b = Math.min(255, b * brightnessBoost);
+
+        const newBoxShadow = `
+          0 0 ${50 * brightnessBoost}px ${20 * brightnessBoost}px rgba(${r}, ${g}, ${b}, 0.8),
+          0 0 ${100 * brightnessBoost}px ${40 * brightnessBoost}px rgba(${r}, ${g}, ${b}, 0.4),
+          0 0 ${150 * brightnessBoost}px ${60 * brightnessBoost}px rgba(${r}, ${g}, ${b}, 0.2)
+        `;
+        setBoxShadow(newBoxShadow);
+        glowAnimationRef.current = requestAnimationFrame(updateGlow);
+      } else {
+        setBoxShadow('');
+        if (glowAnimationRef.current) {
+          cancelAnimationFrame(glowAnimationRef.current);
+        }
+      }
+    };
+
+    const handlePlay = () => {
+      setIsPlaying(true);
+      if (isGlowEnabled) {
+        updateGlow();
+      }
+    };
+
+    const handlePause = () => {
+      setIsPlaying(false);
+      if (glowAnimationRef.current) {
+        cancelAnimationFrame(glowAnimationRef.current);
+      }
+      if (!isGlowEnabled) {
+        setBoxShadow('');
+      }
+    };
+
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+
+    // Запускаем эффект сразу, если видео уже воспроизводится
+    if (!video.paused && isGlowEnabled) {
+      updateGlow();
+    }
+
+    return () => {
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+      if (glowAnimationRef.current) {
+        cancelAnimationFrame(glowAnimationRef.current);
+      }
+    };
+  }, [isGlowEnabled, glowIntensity]);
 
   useEffect(() => {
     if (!selectedEpisode || !selectedQuality) return;
@@ -133,100 +474,6 @@ const EpisodePlayer = ({ episodes }) => {
     }
   }, [selectedEpisode, selectedQuality]);
 
-  const handleEpisodeChange = (event) => {
-    const episode = episodes.find(ep => ep.episode === event.target.value);
-    setSelectedEpisode(episode);
-  };
-
-  const handleQualityChange = (event) => {
-    setSelectedQuality(event.target.value);
-  };
-
-  const handlePlayPause = () => {
-    const video = videoRef.current;
-    if (video) {
-      if (video.paused) {
-        video.play();
-        setIsPlaying(true);
-      } else {
-        video.pause();
-        setIsPlaying(false);
-      }
-    }
-  };
-
-  const handleMute = () => {
-    const video = videoRef.current;
-    if (video) {
-      video.muted = !video.muted;
-      setIsMuted(video.muted);
-    }
-  };
-
-  const handleTimeUpdate = () => {
-    const video = videoRef.current;
-    if (video) {
-      setCurrentTime(video.currentTime);
-      setDuration(video.duration);
-    }
-  };
-
-  const handleFullscreen = () => {
-    const video = videoRef.current;
-    if (video) {
-      if (video.requestFullscreen) {
-        video.requestFullscreen();
-      } else if (video.webkitRequestFullscreen) {
-        video.webkitRequestFullscreen();
-      } else if (video.msRequestFullscreen) {
-        video.msRequestFullscreen();
-      }
-    }
-  };
-
-  const handlePrevEpisode = () => {
-    const currentIndex = episodes.findIndex(ep => ep.episode === selectedEpisode.episode);
-    if (currentIndex > 0) {
-      setSelectedEpisode(episodes[currentIndex - 1]);
-    }
-  };
-
-  const handleNextEpisode = () => {
-    const currentIndex = episodes.findIndex(ep => ep.episode === selectedEpisode.episode);
-    if (currentIndex < episodes.length - 1) {
-      setSelectedEpisode(episodes[currentIndex + 1]);
-    }
-  };
-
-  const handleTimeSliderChange = (event, newValue) => {
-    const video = videoRef.current;
-    if (video) {
-      video.currentTime = newValue;
-      setCurrentTime(newValue);
-    }
-  };
-
-  const handleVolumeChange = (event, newValue) => {
-    const video = videoRef.current;
-    if (video) {
-      video.volume = newValue;
-      setVolume(newValue);
-      setIsMuted(newValue === 0);
-    }
-  };
-
-  const handleMouseMove = () => {
-    setShowControls(true);
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
-    controlsTimeoutRef.current = setTimeout(() => {
-      if (!videoRef.current?.paused) {
-        setShowControls(false);
-      }
-    }, 3000);
-  };
-
   const formatTime = (time) => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
@@ -242,209 +489,205 @@ const EpisodePlayer = ({ episodes }) => {
   }
 
   return (
-    <Paper
-      elevation={24}
-      sx={{
-        position: 'relative',
-        width: '100%',
-        backgroundColor: 'transparent',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        '&:hover': {
-          '& .controls-overlay': {
-            opacity: 1,
-          },
-        },
-      }}
-    >
-      <Box
-        onMouseMove={handleMouseMove}
-        onMouseLeave={() => !videoRef.current?.paused && setShowControls(false)}
-        sx={{ position: 'relative', width: '100%', paddingTop: '56.25%' }}
-      >
-        <video
-          ref={videoRef}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            borderRadius: '12px',
-          }}
-          onTimeUpdate={handleTimeUpdate}
-        />
-
-        {/* Overlay с элементами управления */}
+    <Box sx={{ 
+      position: 'relative',
+      width: '100%',
+      backgroundColor: 'transparent',
+      overflow: 'visible'
+    }}>
+      <VideoContainer boxShadow={boxShadow}>
         <Box
-          className="controls-overlay"
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%, rgba(0,0,0,0.7) 100%)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'flex-end',
-            padding: '20px',
-            opacity: showControls ? 1 : 0,
-            transition: 'opacity 0.3s ease-in-out',
-            zIndex: 1,
-          }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => !videoRef.current?.paused && setShowControls(false)}
+          sx={{ position: 'relative', width: '100%', paddingTop: '56.25%' }}
         >
-          {/* Слайдер времени */}
-          <Box sx={{ width: '100%', mb: 2 }}>
-            <Slider
-              value={currentTime}
-              min={0}
-              max={duration || 100}
-              onChange={handleTimeSliderChange}
-              sx={{
-                color: theme.palette.primary.main,
-                height: 4,
-                '& .MuiSlider-thumb': {
-                  width: 8,
-                  height: 8,
-                  transition: '0.3s cubic-bezier(.47,1.64,.41,.8)',
-                  '&:hover, &.Mui-focusVisible': {
-                    boxShadow: `0px 0px 0px 8px ${alpha(theme.palette.primary.main, 0.16)}`,
-                    width: 12,
-                    height: 12,
-                  },
-                },
-                '& .MuiSlider-rail': {
-                  opacity: 0.28,
-                },
-              }}
-            />
-          </Box>
-
-          {/* Нижняя панель управления */}
-          <Stack
-            direction="row"
-            spacing={1}
-            alignItems="center"
-            sx={{
+          <video
+            ref={videoRef}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
               width: '100%',
-              background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)',
-              borderRadius: '8px',
-              padding: '8px',
+              height: '100%',
+              borderRadius: '10px',
+            }}
+            onClick={handlePlayPause}
+            onTimeUpdate={handleTimeUpdate}
+          />
+          
+          {/* Controls overlay */}
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
+              padding: '20px',
+              transition: 'opacity 0.3s ease',
+              opacity: showControls ? 1 : 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
             }}
           >
-            <IconButton onClick={handlePlayPause} sx={{ color: 'white' }}>
-              {isPlaying ? <Pause /> : <PlayArrow />}
-            </IconButton>
+            {/* Top controls row */}
+            <Stack direction="row" spacing={1} alignItems="center">
+              <IconButton onClick={handlePlayPause} sx={{ color: 'white' }}>
+                {isPlaying ? <Pause /> : <PlayArrow />}
+              </IconButton>
 
-            <IconButton onClick={handlePrevEpisode} disabled={!episodes?.length} sx={{ color: 'white' }}>
-              <SkipPrevious />
-            </IconButton>
+              <IconButton onClick={handlePrevEpisode} disabled={!episodes?.length} sx={{ color: 'white' }}>
+                <SkipPrevious />
+              </IconButton>
 
-            <IconButton onClick={handleNextEpisode} disabled={!episodes?.length} sx={{ color: 'white' }}>
-              <SkipNext />
-            </IconButton>
-
-            <Box sx={{ width: 100, mx: 1 }}>
+              <IconButton onClick={handleNextEpisode} disabled={!episodes?.length} sx={{ color: 'white' }}>
+                <SkipNext />
+              </IconButton>
+              
+              <IconButton onClick={handleMute} sx={{ color: 'white' }}>
+                {isMuted ? <VolumeOff /> : <VolumeUp />}
+              </IconButton>
+              
               <Slider
+                size="small"
                 value={volume}
                 onChange={handleVolumeChange}
                 min={0}
                 max={1}
                 step={0.1}
-                sx={{
-                  color: theme.palette.primary.main,
-                  '& .MuiSlider-thumb': {
-                    width: 12,
-                    height: 12,
-                  },
-                }}
+                sx={{ width: 100 }}
               />
+
+              <Box sx={{ flexGrow: 1 }} />
+
+              <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
+                <Select
+                  value={selectedEpisode?.episode || ''}
+                  onChange={handleEpisodeChange}
+                  sx={{
+                    color: 'white',
+                    '.MuiSelect-icon': { color: 'white' },
+                    '&:before': { borderColor: 'white' },
+                    '&:after': { borderColor: theme.palette.primary.main },
+                  }}
+                >
+                  {episodes?.map((ep) => (
+                    <MenuItem key={ep.episode} value={ep.episode}>
+                      Эпизод {ep.episode}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
+                <Select
+                  value={selectedQuality}
+                  onChange={handleQualityChange}
+                  sx={{
+                    color: 'white',
+                    '.MuiSelect-icon': { color: 'white' },
+                    '&:before': { borderColor: 'white' },
+                    '&:after': { borderColor: theme.palette.primary.main },
+                  }}
+                >
+                  {availableQualities.map((quality) => (
+                    <MenuItem key={quality} value={quality}>
+                      {quality === 'fhd' ? '1080p' : quality === 'hd' ? '720p' : '480p'}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              <Box sx={{ position: 'relative' }}>
+                <Tooltip title={isGlowEnabled ? "Выключить эффект свечения" : "Включить эффект свечения"}>
+                  <GlowButton
+                    onClick={handleGlowToggle}
+                    isActive={isGlowEnabled}
+                    onMouseEnter={() => setShowGlowSlider(true)}
+                    onMouseLeave={() => setShowGlowSlider(false)}
+                  >
+                    {isGlowEnabled ? <Lightbulb /> : <LightbulbOutlined />}
+                  </GlowButton>
+                </Tooltip>
+                
+                {showGlowSlider && isGlowEnabled && (
+                  <GlowIntensitySlider
+                    onMouseEnter={() => setShowGlowSlider(true)}
+                    onMouseLeave={() => setShowGlowSlider(false)}
+                  >
+                    <Typography className="intensity-label">
+                      Свечение
+                    </Typography>
+                    <Slider
+                      orientation="vertical"
+                      value={glowIntensity}
+                      onChange={handleGlowIntensityChange}
+                      min={0}
+                      max={100}
+                    />
+                  </GlowIntensitySlider>
+                )}
+              </Box>
+
+              <IconButton onClick={handleFullscreen} sx={{ color: 'white' }}>
+                <Fullscreen />
+              </IconButton>
+            </Stack>
+
+            {/* Progress bar */}
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Typography variant="body2" sx={{ color: 'white' }}>
+                {formatTime(currentTime)}
+              </Typography>
+              
+              <Slider
+                size="small"
+                value={currentTime}
+                onChange={handleTimeSliderChange}
+                min={0}
+                max={duration}
+                sx={{ flexGrow: 1 }}
+              />
+              
+              <Typography variant="body2" sx={{ color: 'white' }}>
+                {formatTime(duration)}
+              </Typography>
+            </Stack>
+          </Box>
+
+          {loading && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 2,
+              }}
+            >
+              <CircularProgress sx={{ color: theme.palette.primary.main }} />
             </Box>
+          )}
 
-            <IconButton onClick={handleMute} sx={{ color: 'white' }}>
-              {isMuted ? <VolumeOff /> : <VolumeUp />}
-            </IconButton>
-
-            <Typography sx={{ color: 'white', flex: 1, textAlign: 'center' }}>
-              {formatTime(currentTime)} / {formatTime(duration)}
-            </Typography>
-
-            <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
-              <Select
-                value={selectedEpisode?.episode || ''}
-                onChange={handleEpisodeChange}
-                sx={{
-                  color: 'white',
-                  '.MuiSelect-icon': { color: 'white' },
-                  '&:before': { borderColor: 'white' },
-                  '&:after': { borderColor: theme.palette.primary.main },
-                }}
-              >
-                {episodes?.map((ep) => (
-                  <MenuItem key={ep.episode} value={ep.episode}>
-                    Эпизод {ep.episode}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
-              <Select
-                value={selectedQuality}
-                onChange={handleQualityChange}
-                sx={{
-                  color: 'white',
-                  '.MuiSelect-icon': { color: 'white' },
-                  '&:before': { borderColor: 'white' },
-                  '&:after': { borderColor: theme.palette.primary.main },
-                }}
-              >
-                {availableQualities.map((quality) => (
-                  <MenuItem key={quality} value={quality}>
-                    {quality === 'fhd' ? '1080p' : quality === 'hd' ? '720p' : '480p'}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <IconButton onClick={handleFullscreen} sx={{ color: 'white' }}>
-              <Fullscreen />
-            </IconButton>
-          </Stack>
+          {error && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                color: 'error.main',
+                textAlign: 'center',
+                zIndex: 2,
+              }}
+            >
+              <Typography variant="h6">{error}</Typography>
+            </Box>
+          )}
         </Box>
-
-        {loading && (
-          <Box
-            sx={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 2,
-            }}
-          >
-            <CircularProgress sx={{ color: theme.palette.primary.main }} />
-          </Box>
-        )}
-
-        {error && (
-          <Box
-            sx={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              color: 'error.main',
-              textAlign: 'center',
-              zIndex: 2,
-            }}
-          >
-            <Typography variant="h6">{error}</Typography>
-          </Box>
-        )}
-      </Box>
-    </Paper>
+      </VideoContainer>
+    </Box>
   );
 };
 
