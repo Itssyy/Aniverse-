@@ -2,12 +2,57 @@ import axios from 'axios';
 import translateText from './translationService';
 
 const JIKAN_API_BASE_URL = 'https://api.jikan.moe/v4';
-const RATE_LIMIT_DELAY = 4000; // Увеличиваем задержку до 4 секунд
+const RATE_LIMIT_DELAY = 1000; // Уменьшаем до 1 секунды
 const ANILIBRIA_API_URL = 'https://api.anilibria.tv/v2';
 
 // Кэш для хранения результатов запросов
 const cache = new Map();
-const CACHE_DURATION = 30 * 60 * 1000; // Увеличиваем время кэширования до 30 минут
+const CACHE_DURATION = 60 * 60 * 1000; // Увеличиваем время кэширования до 1 часа
+const PREFETCH_LIMIT = 6; // Лимит для предварительной загрузки
+
+// Локальное хранилище
+const LOCAL_STORAGE_KEY = 'animeCache';
+const LOCAL_STORAGE_VERSION = '1.0';
+
+// Загрузка кэша из localStorage при инициализации
+const loadCacheFromStorage = () => {
+  try {
+    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (stored) {
+      const { version, data, timestamp } = JSON.parse(stored);
+      if (version === LOCAL_STORAGE_VERSION && Date.now() - timestamp < CACHE_DURATION) {
+        Object.entries(data).forEach(([key, value]) => {
+          cache.set(key, { data: value, timestamp });
+        });
+      }
+    }
+  } catch (error) {
+    console.warn('Error loading cache from storage:', error);
+  }
+};
+
+// Сохранение кэша в localStorage
+const saveCacheToStorage = () => {
+  try {
+    const data = {};
+    cache.forEach((value, key) => {
+      data[key] = value.data;
+    });
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+      version: LOCAL_STORAGE_VERSION,
+      data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.warn('Error saving cache to storage:', error);
+  }
+};
+
+// Загружаем кэш при инициализации
+loadCacheFromStorage();
+
+// Периодически сохраняем кэш
+setInterval(saveCacheToStorage, 5 * 60 * 1000); // Каждые 5 минут
 
 // Очередь запросов
 let requestQueue = Promise.resolve();
@@ -69,21 +114,20 @@ const animeService = {
 
     initializationPromise = (async () => {
       try {
-        // Загружаем данные последовательно, чтобы избежать превышения лимита
-        const topAnimeResponse = await this.makeRequest('/top/anime?limit=9');
-        initialData.topAnime = topAnimeResponse.data.map(this.formatAnimeData);
-        await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
+        // Загружаем основные данные параллельно
+        const [topAnimeResponse, currentSeasonResponse, genresResponse] = await Promise.all([
+          this.makeRequest('/top/anime?limit=9'),
+          this.makeRequest('/seasons/now?limit=9'),
+          this.makeRequest('/genres/anime')
+        ]);
 
-        const currentSeasonResponse = await this.makeRequest('/seasons/now?limit=9');
+        // Обрабатываем полученные данные
+        initialData.topAnime = topAnimeResponse.data.map(this.formatAnimeData);
         initialData.currentSeason = currentSeasonResponse.data
           .filter(anime => anime.score)
           .sort((a, b) => b.score - a.score)
           .slice(0, 9)
           .map(this.formatAnimeData);
-        await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
-
-        // Загружаем только базовую информацию о жанрах
-        const genresResponse = await this.makeRequest('/genres/anime');
         initialData.popularGenres = genresResponse.data
           .sort((a, b) => b.count - a.count)
           .slice(0, 6)
@@ -91,8 +135,11 @@ const animeService = {
             id: genre.mal_id,
             name: genre.name,
             description: `${genre.count} аниме`,
-            examples: [] // Примеры будем загружать по требованию
+            examples: []
           }));
+
+        // Предварительно загружаем дополнительные данные в фоновом режиме
+        this.prefetchAdditionalData();
 
         isInitialized = true;
         return initialData;
@@ -120,36 +167,27 @@ const animeService = {
       await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY - timeSinceLastRequest));
     }
 
-    return new Promise((resolve, reject) => {
-      requestQueue = requestQueue
-        .then(async () => {
-          try {
-            lastRequestTime = Date.now();
-            const response = await api.get(url);
-            
-            if (response.status === 429 && retries > 0) {
-              console.log(`Rate limit hit, waiting ${RATE_LIMIT_DELAY * 2}ms before retry... (${retries} retries left)`);
-              await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY * 2));
-              return this.makeRequest(url, retries - 1);
-            }
+    try {
+      lastRequestTime = Date.now();
+      const response = await api.get(url);
+      
+      if (response.status === 429 && retries > 0) {
+        console.log(`Rate limit hit, waiting ${RATE_LIMIT_DELAY * 2}ms before retry... (${retries} retries left)`);
+        await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY * 2));
+        return this.makeRequest(url, retries - 1);
+      }
 
-            const data = response.data;
-            setCacheData(cacheKey, data);
-            return data;
-          } catch (error) {
-            if (error.response?.status === 429 && retries > 0) {
-              console.log(`Rate limit hit, waiting ${RATE_LIMIT_DELAY * 2}ms before retry... (${retries} retries left)`);
-              await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY * 2));
-              return this.makeRequest(url, retries - 1);
-            }
-            throw error;
-          }
-        })
-        .then(resolve)
-        .catch(reject);
-
-      requestQueue = requestQueue.then(() => new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY)));
-    });
+      const data = response.data;
+      setCacheData(cacheKey, data);
+      return data;
+    } catch (error) {
+      if (error.response?.status === 429 && retries > 0) {
+        console.log(`Rate limit hit, waiting ${RATE_LIMIT_DELAY * 2}ms before retry... (${retries} retries left)`);
+        await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY * 2));
+        return this.makeRequest(url, retries - 1);
+      }
+      throw error;
+    }
   },
 
   async getTopAnime(limit = 9) {
@@ -552,6 +590,27 @@ const animeService = {
       duration: anime.duration,
       type: anime.type
     };
+  },
+
+  // Предварительная загрузка дополнительных данных
+  async prefetchAdditionalData() {
+    try {
+      const seasons = this.getSeasons();
+      const prefetchPromises = [
+        this.getSeasonalAnime(seasons.previous, PREFETCH_LIMIT),
+        this.getLatestUpdates(PREFETCH_LIMIT),
+        ...initialData.popularGenres.slice(0, 3).map(genre =>
+          this.makeRequest(`/anime?genres=${genre.id}&order_by=score&sort=desc&limit=3`)
+        )
+      ];
+
+      // Загружаем данные в фоновом режиме
+      Promise.all(prefetchPromises).catch(error => {
+        console.warn('Error prefetching additional data:', error);
+      });
+    } catch (error) {
+      console.warn('Error in prefetch:', error);
+    }
   }
 };
 

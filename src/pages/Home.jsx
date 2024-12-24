@@ -26,64 +26,92 @@ const Home = () => {
     totalUsers: 0,
     totalViews: 0
   });
+  const [sectionsLoading, setSectionsLoading] = useState({
+    featured: true,
+    top: true,
+    current: true,
+    previous: true,
+    latest: true,
+    genres: true
+  });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
-        setError(null);
+        // Инициализируем сервис
+        await animeService.initialize();
 
+        // Получаем базовые данные
         const seasons = animeService.getSeasons();
         if (!seasons || !seasons.current || !seasons.previous) {
           throw new Error('Invalid seasons data');
         }
-        
-        const [topResults, currentResults, previousResults, latestResults, genresResults, statsResults] = await Promise.all([
-          animeService.getTopAnime(),
-          animeService.getSeasonalAnime(seasons.current),
-          animeService.getSeasonalAnime(seasons.previous),
-          animeService.getLatestUpdates(),
-          animeService.getPopularGenres(),
-          animeService.getStatistics()
-        ]);
 
-        // Проверяем валидность данных
-        if (!Array.isArray(topResults) || !Array.isArray(currentResults) || 
-            !Array.isArray(previousResults) || !Array.isArray(latestResults) ||
-            !Array.isArray(genresResults)) {
-          throw new Error('Invalid data format received');
-        }
+        // Загружаем данные поэтапно
+        // 1. Сначала загружаем критически важные данные
+        const loadCriticalData = async () => {
+          const [topAnime, currentSeason] = await Promise.all([
+            animeService.getTopAnime(),
+            animeService.getSeasonalAnime(seasons.current)
+          ]);
+          setTopAnime(topAnime);
+          setCurrentSeasonAnime(currentSeason);
+          setSectionsLoading(prev => ({
+            ...prev,
+            top: false,
+            current: false
+          }));
 
-        // Фильтруем невалидные элементы
-        const validateAnime = (anime) => anime && anime.id && anime.title && anime.image;
-        
-        setTopAnime(topResults.filter(validateAnime));
-        setCurrentSeasonAnime(currentResults.filter(validateAnime));
-        setPreviousSeasonAnime(previousResults.filter(validateAnime));
-        setLatestUpdates(latestResults.filter(validateAnime));
-        setGenres(genresResults.filter(genre => genre && genre.id && genre.name));
-        setStatistics({
-          totalAnime: statsResults?.totalAnime || 0,
-          totalUsers: statsResults?.totalUsers || 0,
-          totalViews: statsResults?.totalViews || 0
-        });
-        
-        // Устанавливаем featured anime только если еще не установлен
-        if (!initialFeaturedSet.current) {
-          const topPool = topResults.filter(validateAnime).slice(0, 3);
-          const currentPool = currentResults.filter(validateAnime).slice(0, 3);
-          const combinedPool = [...topPool, ...currentPool];
-          
-          if (combinedPool.length > 0) {
-            const randomIndex = Math.floor(Math.random() * combinedPool.length);
-            setFeaturedAnime(combinedPool[randomIndex]);
+          // Устанавливаем featured anime сразу после получения первых данных
+          if (!initialFeaturedSet.current && (topAnime.length > 0 || currentSeason.length > 0)) {
+            const combinedPool = [...(topAnime || []), ...(currentSeason || [])].filter(anime => anime && anime.id);
+            if (combinedPool.length > 0) {
+              const randomIndex = Math.floor(Math.random() * combinedPool.length);
+              setFeaturedAnime(combinedPool[randomIndex]);
+              setSectionsLoading(prev => ({ ...prev, featured: false }));
+            }
+            initialFeaturedSet.current = true;
           }
-          initialFeaturedSet.current = true;
-        }
+        };
+
+        // 2. Затем загружаем второстепенные данные
+        const loadSecondaryData = async () => {
+          const [previousSeason, genres] = await Promise.all([
+            animeService.getSeasonalAnime(seasons.previous),
+            animeService.getPopularGenres()
+          ]);
+          setPreviousSeasonAnime(previousSeason);
+          setGenres(genres);
+          setSectionsLoading(prev => ({
+            ...prev,
+            previous: false,
+            genres: false
+          }));
+        };
+
+        // 3. Наконец, загружаем дополнительные данные
+        const loadAdditionalData = async () => {
+          const [latestUpdates, stats] = await Promise.all([
+            animeService.getLatestUpdates(),
+            animeService.getStatistics()
+          ]);
+          setLatestUpdates(latestUpdates);
+          setStatistics(stats);
+          setSectionsLoading(prev => ({
+            ...prev,
+            latest: false
+          }));
+        };
+
+        // Запускаем загрузку всех данных
+        await loadCriticalData();
+        loadSecondaryData(); // Не ждем завершения
+        loadAdditionalData(); // Не ждем завершения
+
       } catch (err) {
         console.error('Error fetching anime data:', err);
         setError(err.message || 'Failed to load anime data. Please try again later.');
-        // Очищаем все состояния при ошибке
+        // Очищаем состояния при ошибке
         setTopAnime([]);
         setCurrentSeasonAnime([]);
         setPreviousSeasonAnime([]);
