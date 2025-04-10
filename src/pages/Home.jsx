@@ -818,21 +818,7 @@ const Home = () => {
                       textDecoration: 'none',
                       transition: 'all 0.3s ease',
                       border: '1px solid rgba(255,16,240,0.1)',
-                      '&:hover': {
-                        transform: 'translateY(-5px)',
-                        boxShadow: '0 5px 20px rgba(255,16,240,0.3)',
-                        '& .genre-overlay': {
-                          opacity: 0.8,
-                        },
-                        '& .genre-count': {
-                          opacity: 1,
-                          transform: 'translateY(0)',
-                        },
-                        '& .genre-title': {
-                          color: '#FF10F0',
-                          textShadow: '0 0 10px rgba(255,16,240,0.5)',
-                        }
-                      },
+
                     }}
                   >
                     <Box

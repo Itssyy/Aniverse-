@@ -599,6 +599,27 @@ const animeService = {
       return [];
     }
   },
+  async getAnimeByGenre(genreId) {
+    try {
+      const response = await this.makeRequest(`/anime?genres=${genreId}&order_by=score&sort=desc`);
+      return response.data.map(this.formatAnimeData);
+    } catch (error) {
+      console.error('Error fetching anime by genre:', error);
+      return [];
+    }
+  },
+  async getGenreId(genreName) {
+    try {
+      const genres = await this.makeRequest('/genres/anime');
+      const genre = genres.data.find(g => g.name === genreName);
+      return genre ? genre.mal_id : null;
+    } catch (error) {
+      console.error('Error fetching genre ID:', error);
+      return null;
+    }
+  },
+
+
 
   async getLatestUpdates(limit = 6) {
     try {

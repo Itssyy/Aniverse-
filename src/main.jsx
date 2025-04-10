@@ -1,10 +1,11 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { RouterProvider, createBrowserRouter } from 'react-router-dom'
+import { RouterProvider, createBrowserRouter, Route } from 'react-router-dom'
 import App from './App'
 import Home from './pages/Home'
 import AnimeList from './pages/AnimeList'
 import AnimePage from './pages/AnimePage'
+import GenrePage from './pages/GenrePage'
 import SearchResults from './pages/SearchResults'
 
 const router = createBrowserRouter([
@@ -27,6 +28,10 @@ const router = createBrowserRouter([
       {
         path: "/search",
         element: <SearchResults />,
+      },
+      {
+        path: "/genre/:genreName",
+        element: <GenrePage />,
       },
       {
         path: "*",
