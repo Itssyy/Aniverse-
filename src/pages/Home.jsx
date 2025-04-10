@@ -138,7 +138,6 @@ const StatsCards = () => {
                     color: '#fff',
                     fontWeight: 'bold',
                     mb: 1,
-                    fontFamily: 'Russo One, sans-serif',
                     textShadow: '2px 2px 4px rgba(0,0,0,0.2)'
                   }}
                 >
@@ -150,7 +149,6 @@ const StatsCards = () => {
                     color: '#fff',
                     fontWeight: 'bold',
                     mb: 1,
-                    fontFamily: 'Russo One, sans-serif'
                   }}
                 >
                   {card.title}
@@ -159,7 +157,6 @@ const StatsCards = () => {
                   variant="body2"
                   sx={{
                     color: 'rgba(255,255,255,0.8)',
-                    fontFamily: 'Russo One, sans-serif'
                   }}
                 >
                   {card.description}

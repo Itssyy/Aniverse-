@@ -137,7 +137,6 @@ const SeasonAnimeCard = ({ anime }) => {
             color: '#fff',
             fontWeight: 600,
             textShadow: '0 0 10px #00f3ff, 0 0 20px #00f3ff, 0 0 30px #00f3ff',
-            fontFamily: "Russo One, sans-serif",
             letterSpacing: '1px',
             marginBottom: '1rem',
             transition: 'all 0.3s ease',
@@ -195,7 +194,6 @@ const SeasonAnimeCard = ({ anime }) => {
             sx={{
               color: '#00f3ff',
               textShadow: '0 0 5px #00f3ff',
-              fontFamily: "Russo One, sans-serif",
               letterSpacing: '0.5px',
             }}
           >
@@ -208,7 +206,6 @@ const SeasonAnimeCard = ({ anime }) => {
             sx={{
               color: '#ff00ff',
               textShadow: '0 0 5px #ff00ff',
-              fontFamily: "Russo One, sans-serif",
               letterSpacing: '0.5px',
             }}
           >

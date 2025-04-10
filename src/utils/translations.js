@@ -53,6 +53,12 @@ const ratingTranslations = {
   'Rx - Hentai': 'Хентай'
 };
 
+const typeTranslations = {
+  'TV': 'ТВ Сериал',
+  'Movie': 'Фильм',
+  'OVA': 'OVA',
+  'ONA': 'ONA'
+};
 // Функция для перевода жанра
 export const translateGenre = (genre) => {
   return genreTranslations[genre] || genre;
@@ -83,4 +89,9 @@ export const translateStatus = (status) => {
 // Функция для перевода рейтинга
 export const translateRating = (rating) => {
   return ratingTranslations[rating] || rating;
+};
+
+// Функция для перевода типа
+export const translateType = (type) => {
+  return typeTranslations[type] || type;
 };

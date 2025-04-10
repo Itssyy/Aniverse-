@@ -121,15 +121,14 @@ const AnimeSearchCard = ({ anime }) => {
           <Typography
             variant="h6"
             sx={{
-              color: '#fff',
+              color: '#00f3ff',
               mb: 1,
               fontWeight: 'bold',
               fontSize: '1.1rem',
-              textShadow: '0 2px 4px rgba(0,0,0,0.3)',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
+              textShadow: '0 0 10px rgba(0,243,255,0.5)',
               display: '-webkit-box',
-              WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
             }}
           >

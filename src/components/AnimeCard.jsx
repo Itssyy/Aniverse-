@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardMedia,
@@ -10,10 +10,12 @@ import {
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { Star } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { translateGenres, formatSeasonYear, translateStatus, translateRating } from '../utils/translations';
+import { translateGenres, formatSeasonYear, translateStatus, translateRating, translateType } from '../utils/translations';
+import translationService from '../services/translationService';
 
 export const AnimeCard = ({ anime }) => {
   const navigate = useNavigate();
+  const [translatedSynopsis, setTranslatedSynopsis] = useState('');
 
   const handlePlayClick = (e) => {
     e.preventDefault();
@@ -21,6 +23,22 @@ export const AnimeCard = ({ anime }) => {
       navigate(`/anime/${anime.id}`);
     }
   };
+  console.log('AnimeCard component mounted with anime:', anime);
+  useEffect(() => {
+    const fetchTranslation = async () => {
+      if (anime.synopsis) {
+        const translation = await translationService.translateText(anime.synopsis);
+        setTranslatedSynopsis(translation);
+        console.log('Translation fetched for synopsis:', anime.synopsis);
+        console.log('Translated synopsis:', translation);
+      }
+      
+      console.log('Server is working');
+    };
+    if (anime.synopsis) {
+      fetchTranslation();
+    }
+  }, [anime.synopsis]);
 
   const translatedGenres = translateGenres(anime.genres?.map(genre => genre.name) || []);
 
@@ -75,11 +93,16 @@ export const AnimeCard = ({ anime }) => {
           transition: 'opacity 0.3s ease-in-out',
           display: 'flex',
           flexDirection: 'column',
+          p: 2,
+          zIndex: 1,
+        }}
+      >
+        <Typography sx={{ color: '#fff',
           justifyContent: 'center',
           alignItems: 'center',
         }}
       >
-        <IconButton
+        <IconButton 
           onClick={handlePlayClick}
           sx={{
             color: 'white',
@@ -93,8 +116,8 @@ export const AnimeCard = ({ anime }) => {
             mb: 2,
           }}
         >
-          <PlayArrowIcon sx={{ fontSize: 40 }} />
-        </IconButton>
+          <PlayArrowIcon sx={{ fontSize: 40 }} /></IconButton>
+        </Typography>
       </Box>
 
       {/* Score Badge */}
@@ -115,11 +138,9 @@ export const AnimeCard = ({ anime }) => {
         >
           <Star sx={{ color: '#FFD700', fontSize: 16 }} />
           <Typography
-            sx={{
-              color: '#FFD700',
-              fontFamily: 'Russo One, sans-serif',
-              fontSize: '0.9rem',
-            }}
+             sx={{
+              color: '#FFD700', fontSize: '0.9rem',
+            }} 
           >
             {anime.score}
           </Typography>
@@ -141,78 +162,78 @@ export const AnimeCard = ({ anime }) => {
         }}
       >
         <Typography
+          variant="h6"
           sx={{
             color: '#fff',
-            fontFamily: 'Russo One, sans-serif',
-            fontSize: '1.1rem',
-            textShadow: '0 0 10px rgba(0,243,255,0.5)',
-            mb: 1,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            fontWeight: 600,
+            textShadow: '0 0 10px #00f3ff, 0 0 20px #00f3ff, 0 0 30px #00f3ff',
+            letterSpacing: '1px',
+            marginBottom: '1rem',
+            transition: 'all 0.3s ease',
             whiteSpace: 'nowrap',
+            
           }}
         >
           {anime.title}
         </Typography>
 
+        <Typography
+          sx={{
+            color: '#fff',
+            fontSize: '0.9rem',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            display: '-webkit-box',
+            WebkitLineClamp: '2',
+            WebkitBoxOrient: 'vertical',
+            mb: 1
+          }}
+        >
+          {translatedSynopsis
+              ? translatedSynopsis
+              : anime.synopsis}
+        </Typography>
+
         <Box className="hover-info" sx={{ opacity: 0, transition: 'opacity 0.3s ease-in-out' }}>
           {/* Genres */}
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
-            {translatedGenres.slice(0, 2).map((genre, index) => (
-              <Box
+            {translatedGenres.slice(0, 3).map((genre, index) => (
+                <Box
                 key={index}
                 sx={{
-                  backgroundColor: alpha('#FF10F0', 0.2),
-                  color: '#FF10F0',
-                  padding: '2px 8px',
-                  borderRadius: '4px',
-                  fontSize: '0.8rem',
-                  fontFamily: 'Russo One, sans-serif',
-                  textShadow: '0 0 5px rgba(255,16,240,0.5)',
-                }}
-              >
-                {genre}
-              </Box>
-            ))}
+                  color: '#FF10F0'}}>
+                    {genre}
+                </Box>
+              ))}
           </Box>
 
           {/* Info Grid */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
-            <Typography
-              sx={{
-                color: '#00f3ff',
-                fontSize: '0.8rem',
-                fontFamily: 'Russo One, sans-serif',
-                textShadow: '0 0 5px rgba(0,243,255,0.5)',
-              }}
-            >
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1 , mb:1}}>
+              <Typography sx={{ color: '#00f3ff'}}>
+                {translateType(anime.type)}
+              </Typography>
+
+              <Typography sx={{ color: '#00f3ff',
+                  textAlign: 'center'}}>
+                {translateStatus(anime.status)}
+              </Typography>
+
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 ,}}>
+            <Typography sx={{ color: '#00f3ff'}}>
               {translateRating(anime.rating)}
             </Typography>
-            <Typography
-              sx={{
-                color: '#00f3ff',
-                fontSize: '0.8rem',
-                fontFamily: 'Russo One, sans-serif',
-                textShadow: '0 0 5px rgba(0,243,255,0.5)',
-                textAlign: 'right',
-              }}
-            >
+            <Typography sx={{ color: '#00f3ff', textAlign: 'right'}}>
               {anime.episodes ? `${anime.episodes} эп.` : 'TBA'}
             </Typography>
-          </Box>
+          </Box> </Box>
+
 
           {/* Season and Studio */}
-          <Typography
-            sx={{
-              color: '#fff',
-              fontSize: '0.8rem',
-              fontFamily: 'Russo One, sans-serif',
-              opacity: 0.8,
-              mt: 0.5,
-            }}
+          <Typography 
+            sx={{ color: '#fff', mt: 0.5,}}
           >
             {formatSeasonYear(anime.season, anime.year)}
-            {anime.studios?.[0] && ` • ${anime.studios[0].name}`}
+            {anime.studios?.[0]?.name && ` • ${anime.studios[0].name}`}
           </Typography>
         </Box>
       </Box>
