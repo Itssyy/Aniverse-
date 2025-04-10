@@ -4,7 +4,7 @@ import AnimeCard from '../components/AnimeCard';
 import { Box, Typography, Grid } from '@mui/material';
 import animeService from '../services/animeService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
-import { ErrorMessage } from '../components/ErrorMessage';
+import { ErrorMessage } from "../components/ErrorMessage";
 
 function GenrePage() {
   const { genreName } = useParams();
@@ -33,8 +33,13 @@ function GenrePage() {
 
 
       } catch (err) {
-        console.error('Error fetching anime by genre:', err);
-        setError(err.message || 'Failed to load anime by genre. Please try again later.');
+        console.error("Error fetching anime by genre:", err);
+        if (err.errorCode) {
+          setError(err);
+        } else {
+          setError({ message: err.message || "Failed to load anime by genre. Please try again later.", errorCode: null });
+        }
+        
         setAnimeList([]);
       } finally {
         setLoading(false);
@@ -56,7 +61,7 @@ function GenrePage() {
 
 
   if (error) {
-    return <ErrorMessage message={error} />;
+    return <ErrorMessage message={error.message} errorCode={error.errorCode} />;
   }
 
   return (

@@ -1,48 +1,17 @@
-import React from 'react';
-import { Box, Typography, Button } from '@mui/material';
-import { Refresh } from '@mui/icons-material';
+import { Box, Typography } from '@mui/material';
 
-export const ErrorMessage = ({ message }) => {
+export const ErrorMessage = ({ message, errorCode }) => {
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, rgba(0,0,0,0.95) 0%, rgba(20,20,20,0.95) 100%)',
-        textAlign: 'center',
-        padding: 3,
-      }}
-    >
-      <Typography
-        variant="h5"
-        sx={{
-          color: '#fff',
-          mb: 2,
-          textShadow: '0 0 10px rgba(255,16,240,0.5)',
-        }}
-      >
-        {message || 'Произошла ошибка'}
-      </Typography>
-      <Button
-        variant="contained"
-        startIcon={<Refresh />}
-        onClick={() => window.location.reload()}
-        sx={{
-          background: 'linear-gradient(45deg, #FF10F0, #00FFFF)',
-          px: 4,
-          py: 1.5,
-          borderRadius: '50px',
-          '&:hover': {
-            background: 'linear-gradient(45deg, #FF10F0, #00FFFF)',
-            filter: 'brightness(1.2)',
-          },
-        }}
-      >
-        Обновить страницу
-      </Button>
+    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: '#333', color: '#fff', flexDirection: 'column' }}>
+      {errorCode === 429 ? (
+        <Typography variant="h4" sx={{ mb: 2 }}>
+          Too many requests. Please try again later.
+        </Typography>
+      ) : (
+        <Typography variant="h4" sx={{ mb: 2 }}>
+          Error: {message}
+        </Typography>
+      )}
     </Box>
   );
 };

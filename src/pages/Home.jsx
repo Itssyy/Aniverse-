@@ -298,7 +298,7 @@ const Home = () => {
   }
 
   if (error) {
-    return <ErrorMessage message={error} />;
+    return <ErrorMessage message={error.message} errorCode={error.errorCode} />;
   }
 
   return (

@@ -292,14 +292,18 @@ const animeService = {
       setCacheData(cacheKey, data);
       return data;
     } catch (error) {
+      console.error('Request failed:', error);
       if (error.response?.status === 429 && retries > 0) {
-        console.log(`Rate limit hit, waiting ${RATE_LIMIT_DELAY * 2}ms before retry... (${retries} retries left)`);
-        await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY * 2));
+        console.warn(`Rate limit hit, waiting 5000ms before retry... (${retries} retries left)`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
         return this.makeRequest(url, retries - 1);
       }
-      throw error;
-    }
-  },
+      if (error.response && error.response.status) {
+        throw { message: error.message, errorCode: error.response.status };
+      } else {
+        throw new Error(error.message);
+      }
+  }},
 
   async getTopAnime(limit = 24) {
     try {
